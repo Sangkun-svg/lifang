@@ -1,0 +1,42 @@
+:root {
+  --lifang-page-width: 1440px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#__next {
+  width: 100%;
+  min-height: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background: #f9f9fa;
+  color: #24282c;
+  font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+body {
+  min-width: 1280px;
+}
+
+#__next {
+  display: flex;
+  justify-content: center;
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input {
+  font-family: inherit;
+}

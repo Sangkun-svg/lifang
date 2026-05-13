@@ -1,0 +1,69 @@
+.footer {
+  width: 100%;
+  min-width: 0;
+  height: 200px;
+  max-height: 200px;
+  background: #4f5459;
+  color: #fefefe;
+}
+
+.footerInner {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  width: 100%;
+  max-width: var(--lifang-page-width);
+  height: 100%;
+  margin: 0 auto;
+  padding: 52px 40px;
+  box-sizing: border-box;
+}
+
+.customerColumn,
+.companyColumn {
+  display: flex;
+  flex: 1 0 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: -0.12px;
+}
+
+.customerColumn {
+  gap: 12px;
+}
+
+.companyColumn {
+  gap: 4px;
+  padding-top: 1px;
+}
+
+.logoWrap {
+  width: 100%;
+  height: 32px;
+}
+
+.logo {
+  display: block;
+  width: 120px;
+  height: 32px;
+}
+
+.customerInfo {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.textBlock {
+  display: flex;
+  flex-direction: column;
+}
+
+.bold {
+  font-weight: 700;
+}

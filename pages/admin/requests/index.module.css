@@ -1,0 +1,128 @@
+.page {
+  width: 100%;
+  min-width: 1128px;
+}
+
+.header {
+  display: flex;
+  height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0;
+  color: #24282c;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.count {
+  margin: 0;
+  color: #4f5459;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
+.tableCard {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.tableHeader,
+.tableRow {
+  display: grid;
+  grid-template-columns: 160px 220px 120px minmax(280px, 1fr) 140px 120px 96px;
+  min-width: 1128px;
+  align-items: center;
+}
+
+.tableHeader {
+  height: 52px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  text-align: center;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableRow {
+  min-height: 52px;
+  border-bottom: 1px solid #e2e5e8;
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  text-align: center;
+}
+
+.dateCell,
+.userCell,
+.productCell,
+.nameCell,
+.platformCell,
+.statusCell,
+.detailCell {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.nameCell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusCell {
+  gap: 4px;
+  font-weight: 700;
+}
+
+.statusCell i {
+  width: 3px;
+  height: 3px;
+  flex: 0 0 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.statusCell[data-status="신규요청"] {
+  color: #ff2b3a;
+}
+
+.statusCell[data-status="처리중"] {
+  color: #ff932e;
+}
+
+.statusCell[data-status="처리완료"] {
+  color: #1084fe;
+}
+
+a.detailCell {
+  color: #24282c;
+  text-decoration: none;
+}
+
+.emptyState {
+  margin: 40px 0 0;
+  color: #9ba3aa;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  text-align: center;
+}

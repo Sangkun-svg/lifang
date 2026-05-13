@@ -1,0 +1,133 @@
+.page {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  background: #f9f9fa;
+}
+
+.loginSection {
+  display: flex;
+  width: var(--lifang-page-width);
+  min-height: 548px;
+  flex: 1 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 52px;
+  padding: 104px 0;
+  box-sizing: border-box;
+  background: #f9f9fa;
+}
+
+.brandGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.brandLogo {
+  display: block;
+  width: 240px;
+  height: 64px;
+}
+
+.title {
+  margin: 0;
+  color: #727171;
+  font-family: "Noto Serif KR";
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 30px;
+}
+
+.form {
+  display: flex;
+  width: 480px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 32px;
+}
+
+.inputGroup {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.inputGroup + .inputGroup {
+  margin-top: -12px;
+}
+
+.label {
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: -0.21px;
+}
+
+.input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid #f0f2f4;
+  border-radius: 16px;
+  box-sizing: border-box;
+  outline: none;
+  background: #ffffff;
+  color: #24282c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: -0.21px;
+}
+
+.input::placeholder {
+  color: #9ba3aa;
+  opacity: 1;
+}
+
+.input:focus {
+  border-color: #d8dde2;
+}
+
+.loginButton {
+  display: flex;
+  width: 100%;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: #9ba3aa;
+  color: #fefefe;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+  cursor: default;
+}
+
+.loginButton[data-active="true"] {
+  background: #ff2b3a;
+  cursor: pointer;
+}
+
+.loginButton:disabled {
+  cursor: default;
+}
+
+.errorMessage {
+  margin: -16px 0 -16px;
+  color: #ff2b3a;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.13px;
+}

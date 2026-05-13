@@ -1,0 +1,218 @@
+.header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0;
+  color: #24282c;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+  letter-spacing: -0.36px;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dateFilter,
+.searchGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  color: #000000;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: -0.21px;
+  white-space: nowrap;
+}
+
+.datePicker,
+.dateBox,
+.searchBox {
+  display: flex;
+  height: 52px;
+  align-items: center;
+}
+
+.dateBox,
+.searchBox {
+  justify-content: space-between;
+  border: 1px solid #f0f2f4;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: -0.21px;
+}
+
+.datePicker {
+  position: relative;
+  width: 144px;
+  flex: 0 0 144px;
+}
+
+.dateBox {
+  width: 100%;
+  padding: 0 16px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dateIcon,
+.searchIcon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+}
+
+.nativeDateInput {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tilde {
+  color: #000000;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.searchBox {
+  width: 220px;
+  padding: 0 14px 0 16px;
+  gap: 16px;
+}
+
+.searchInput {
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  outline: 0;
+  color: #24282c;
+  font: inherit;
+}
+
+.searchInput::placeholder {
+  color: #9ba3aa;
+}
+
+.createButton {
+  display: flex;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-radius: 16px;
+  background: #ff2b3a;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.plusIcon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.tableCard {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.tableHeader,
+.tableRow {
+  display: grid;
+  grid-template-columns: 104px 176px 152px 280px minmax(320px, 1fr) 96px;
+  align-items: center;
+  min-width: 1128px;
+}
+
+.tableHeader {
+  height: 52px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: -0.21px;
+  text-align: center;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableRow {
+  height: 52px;
+  border-bottom: 1px solid #e2e5e8;
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: -0.21px;
+  text-align: center;
+}
+
+.dateCell,
+.companyCell,
+.managerCell,
+.emailCell,
+.sheetCell,
+.actionCell {
+  min-width: 0;
+  padding: 0 16px;
+}
+
+.emailCell {
+  word-break: break-all;
+}
+
+.sheetCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.sheetUrl {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheetCount {
+  flex: 0 0 auto;
+}
+
+a.actionCell {
+  color: #24282c;
+  text-decoration: none;
+}

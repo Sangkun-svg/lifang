@@ -1,0 +1,163 @@
+.root {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2147483000;
+  font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+.cta {
+  display: flex;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #24282c;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 32px rgb(36 40 44 / 18%);
+}
+
+.highlight {
+  position: fixed;
+  z-index: 2147482998;
+  border: 2px solid #ff2b3a;
+  background: rgb(255 43 58 / 10%);
+  pointer-events: none;
+}
+
+.highlight::before {
+  position: absolute;
+  inset: -6px;
+  border: 1px dashed rgb(255 43 58 / 60%);
+  content: "";
+}
+
+.guide {
+  position: fixed;
+  right: 24px;
+  bottom: 80px;
+  z-index: 2147483000;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #24282c;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 12px 32px rgb(36 40 44 / 18%);
+  pointer-events: none;
+}
+
+.panel {
+  display: flex;
+  width: 360px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e2e5e8;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgb(36 40 44 / 18%);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panelHeader strong {
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.panelHeader button,
+.actions button {
+  border: 0;
+  background: transparent;
+  color: #4f5459;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.selector,
+.rect,
+.message,
+.toast {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.selector {
+  overflow: hidden;
+  color: #1084fe;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rect {
+  color: #9ba3aa;
+}
+
+.panel textarea {
+  width: 100%;
+  min-height: 108px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid #e2e5e8;
+  border-radius: 12px;
+  outline: none;
+  background: #ffffff;
+  color: #24282c;
+  font: inherit;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.panel textarea::placeholder {
+  color: #9ba3aa;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.actions button:last-child {
+  min-width: 72px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #ff2b3a;
+  color: #ffffff;
+}
+
+.actions button:last-child:disabled {
+  background: #9ba3aa;
+  cursor: default;
+}
+
+.message {
+  color: #ff2b3a;
+}
+
+.toast {
+  position: absolute;
+  right: 0;
+  bottom: 52px;
+  width: max-content;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #24282c;
+  color: #ffffff;
+  font-weight: 700;
+}

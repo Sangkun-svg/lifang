@@ -1,0 +1,145 @@
+.page {
+  width: 100%;
+  min-width: 1128px;
+}
+
+.header {
+  display: flex;
+  height: 52px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0;
+  color: #24282c;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.uploadPanel {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(240px, 1fr) minmax(240px, 1fr) 140px;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field span {
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
+.field input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid #f0f2f4;
+  border-radius: 16px;
+  outline: none;
+  background: #ffffff;
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.uploadButton {
+  display: flex;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 16px;
+  background: #ff2b3a;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+  cursor: pointer;
+}
+
+.uploadButton:disabled {
+  background: #9ba3aa;
+  cursor: default;
+}
+
+.errorMessage {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #ff2b3a;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
+.sheetTable {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.tableHeader,
+.tableRow {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(240px, 1fr) 140px 96px;
+  min-width: 1128px;
+  align-items: center;
+  text-align: center;
+}
+
+.tableHeader {
+  height: 52px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
+.tableRows {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableRow {
+  min-height: 52px;
+  border-bottom: 1px solid #e2e5e8;
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
+.tableRow span,
+.tableRow a {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 16px;
+  color: #24282c;
+  text-overflow: ellipsis;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.emptyState {
+  margin: 40px 0 0;
+  color: #9ba3aa;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  text-align: center;
+}
