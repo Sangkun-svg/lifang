@@ -511,26 +511,28 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
             <div className={styles.barGroups}>
               {dashboardData.monthlyData.map((datum) => (
                 <div className={styles.barGroup} key={datum.month}>
-                  {highlightedMonth.month === datum.month && datum.counterfeit > 0 ? (
-                    <>
-                      <span className={styles.counterfeitCallout}>
-                        위조품
-                        <br />
-                        {datum.counterfeit.toLocaleString('ko-KR')}건
-                      </span>
-                      <span className={styles.blockedCallout}>
-                        차단
-                        <br />
-                        {datum.blocked.toLocaleString('ko-KR')}건
-                      </span>
-                    </>
-                  ) : null}
                   <div className={styles.bars}>
                     <span
                       className={styles.counterfeitBar}
                       style={{ height: `${(datum.counterfeit / maxMonthlyValue) * 264}px` }}
-                    />
-                    <span className={styles.blockedBar} style={{ height: `${(datum.blocked / maxMonthlyValue) * 264}px` }} />
+                    >
+                      {highlightedMonth.month === datum.month && datum.counterfeit > 0 ? (
+                        <span className={styles.counterfeitCallout}>
+                          위조품
+                          <br />
+                          {datum.counterfeit.toLocaleString('ko-KR')}건
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className={styles.blockedBar} style={{ height: `${(datum.blocked / maxMonthlyValue) * 264}px` }}>
+                      {highlightedMonth.month === datum.month && datum.blocked > 0 ? (
+                        <span className={styles.blockedCallout}>
+                          차단
+                          <br />
+                          {datum.blocked.toLocaleString('ko-KR')}건
+                        </span>
+                      ) : null}
+                    </span>
                   </div>
                   <span className={styles.monthLabel}>{datum.month}</span>
                 </div>

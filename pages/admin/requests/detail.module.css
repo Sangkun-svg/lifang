@@ -1,6 +1,6 @@
 .page {
   display: flex;
-  width: 800px;
+  width: min(100%, 1040px);
   flex-direction: column;
   gap: 20px;
   margin: 0 auto;
@@ -8,7 +8,7 @@
 
 .card {
   display: flex;
-  width: 800px;
+  width: 100%;
   flex-direction: column;
   gap: 32px;
   padding: 32px;
@@ -38,6 +38,7 @@
   font-size: 24px;
   font-weight: 700;
   line-height: 32px;
+  word-break: break-all;
 }
 
 .status {
@@ -114,6 +115,102 @@
 
 .infoRow dd {
   word-break: break-all;
+}
+
+.productImage {
+  display: block;
+  width: 164px;
+  height: 164px;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.editList {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editRow {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 180px minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
+.editRow label {
+  min-width: 0;
+}
+
+.editRow input,
+.editRow select {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid #e2e5e8;
+  border-radius: 12px;
+  outline: 0;
+  background: #ffffff;
+  color: #24282c;
+  font: inherit;
+}
+
+.editRow input:focus,
+.editRow select:focus {
+  border-color: #1084fe;
+}
+
+.errorMessage,
+.successMessage {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
+.errorMessage {
+  color: #ff2b3a;
+}
+
+.successMessage {
+  color: #1084fe;
+}
+
+.actions {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.saveButton {
+  display: flex;
+  min-width: 96px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 16px;
+  background: #ff2b3a;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+  cursor: pointer;
+}
+
+.saveButton:disabled {
+  cursor: default;
+  opacity: 0.65;
 }
 
 .divider {

@@ -143,6 +143,32 @@ function sortItemsByFilterField(items: ProductHistoryItem[], filterField: Produc
   });
 }
 
+function CheckboxMarkIcon() {
+  return (
+    <svg className={styles.checkboxIcon} width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect className={styles.checkboxIconBox} width="24" height="24" rx="8" />
+      <path
+        className={styles.checkboxIconCheck}
+        d="M16.8002 8.40002L9.64068 15.6L7.2002 13.1457"
+        stroke="#FEFEFE"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function PaginationChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+  const path = direction === 'left' ? 'M15 17L10 12L15 7' : 'M10 7L15 12L10 17';
+
+  return (
+    <svg className={styles.paginationIcon} width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d={path} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
 export const getServerSideProps: GetServerSideProps<ProductHistoryListPageProps> = async ({ query, req, res }) => {
   const user = await getUserSessionUser(req, res);
 
@@ -362,7 +388,9 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
                           onChange={(event) => handleBlockRequest(item.id, event.target.checked)}
                           aria-label={`${rowNumber}번 차단 신청`}
                         />
-                        <span className={styles.checkboxMark} />
+                        <span className={styles.checkboxMark}>
+                          <CheckboxMarkIcon />
+                        </span>
                         {isRequesting ? (
                           <DoubleBounceLoader
                             className={styles.checkboxLoader}
@@ -384,8 +412,13 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
           </section>
 
           <nav className={styles.pagination} aria-label="내역목록 페이지네이션">
-            <button type="button" onClick={() => setCurrentPage(Math.max(1, page - 1))} aria-label="이전 페이지">
-              ‹
+            <button
+              type="button"
+              onClick={() => setCurrentPage(Math.max(1, page - 1))}
+              disabled={page <= 1}
+              aria-label="이전 페이지"
+            >
+              <PaginationChevronIcon direction="left" />
             </button>
             {pageNumbers.map((pageNumber) => (
               <button
@@ -398,8 +431,13 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
                 {pageNumber}
               </button>
             ))}
-            <button type="button" onClick={() => setCurrentPage(Math.min(totalPages, page + 1))} aria-label="다음 페이지">
-              ›
+            <button
+              type="button"
+              onClick={() => setCurrentPage(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+              aria-label="다음 페이지"
+            >
+              <PaginationChevronIcon direction="right" />
             </button>
           </nav>
         </div>

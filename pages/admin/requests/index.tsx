@@ -119,7 +119,7 @@ export default function AdminRequestsPage({ requests, sheetSummaries }: AdminReq
       <AdminLayout sheetSummaries={sheetSummaries}>
         <div className={styles.page}>
           <header className={styles.header}>
-            <h1 className={styles.title}>최근 요청</h1>
+            <h1 className={styles.title}>최근 요청({requests.length.toLocaleString('ko-KR')}건)</h1>
             <div className={styles.headerControls}>
               <label className={styles.sortGroup}>
                 <span>필터</span>
@@ -131,7 +131,6 @@ export default function AdminRequestsPage({ requests, sheetSummaries }: AdminReq
                   ))}
                 </select>
               </label>
-              <p className={styles.count}>총 {requests.length.toLocaleString('ko-KR')}건</p>
             </div>
           </header>
 

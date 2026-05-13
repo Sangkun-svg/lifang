@@ -1,9 +1,20 @@
 export type AdminRequestStatus = '신규요청' | '처리중' | '처리완료' | '반려';
 
 export type AdminRequest = {
+  blockApproval: string;
+  blockObjection: string;
+  blockObjectionDecision: string;
+  blockObjectionReason: string;
+  blockReapproval: string;
+  blockRejectionReason: string;
+  blockReport: string;
+  blockRereport: string;
+  blockRereportRejectionReason: string;
+  blockStatus: string;
   companyName: string;
   createdAt: string;
   id: string;
+  imageUrl: string;
   itemId: string;
   message: string;
   platform: string;
@@ -14,6 +25,8 @@ export type AdminRequest = {
   salesCount: number;
   salesUrl: string;
   searchDate: string;
+  sheetId: string;
+  sheetRecordId: string;
   status: AdminRequestStatus;
   userEmail: string;
   userId: string;
