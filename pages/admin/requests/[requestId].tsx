@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { getAdminRequestById } from '@/lib/admin/requests';
+import { demoAdminRequest, getAdminRequestById } from '@/lib/admin/requests';
 import { getSheetSummaries } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
 import type { AdminRequest } from '@/types/adminRequest';
@@ -62,7 +62,7 @@ export const getServerSideProps: GetServerSideProps<AdminRequestDetailPageProps>
   }
 
   try {
-    const [request, sheetSummaries] = await Promise.all([getAdminRequestById(requestId), getSheetSummaries()]);
+    const request = requestId === demoAdminRequest.id ? demoAdminRequest : await getAdminRequestById(requestId);
 
     if (!request) {
       return {
@@ -71,6 +71,14 @@ export const getServerSideProps: GetServerSideProps<AdminRequestDetailPageProps>
           permanent: false,
         },
       };
+    }
+
+    let sheetSummaries: SheetSummary[] = [];
+
+    try {
+      sheetSummaries = await getSheetSummaries();
+    } catch (error) {
+      console.error('Load request detail sheet summaries failed', error);
     }
 
     return {

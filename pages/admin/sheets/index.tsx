@@ -1,10 +1,12 @@
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
+import { Upload } from 'lucide-react';
+import { FormEvent, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { DoubleBounceLoader } from '@/components/ui/DoubleBounceLoader';
 import type { ApiResponse } from '@/lib/api/responses';
 import { getSheetSummaries } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
@@ -55,6 +57,7 @@ export const getServerSideProps: GetServerSideProps<AdminSheetsPageProps> = asyn
 
 export default function AdminSheetsPage({ sheetSummaries }: AdminSheetsPageProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [sheetName, setSheetName] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -119,7 +122,17 @@ export default function AdminSheetsPage({ sheetSummaries }: AdminSheetsPageProps
 
             <label className={styles.field}>
               <span>엑셀 파일</span>
+              <button
+                className={styles.fileSelectButton}
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className={styles.fileSelectIcon} aria-hidden="true" />
+                <span className={styles.fileName}>{file ? file.name : '파일 선택'}</span>
+              </button>
               <input
+                ref={fileInputRef}
+                className={styles.fileInput}
                 accept=".xlsx,.xls,.csv"
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
                 type="file"
@@ -133,7 +146,14 @@ export default function AdminSheetsPage({ sheetSummaries }: AdminSheetsPageProps
             ) : null}
 
             <button className={styles.uploadButton} type="submit" disabled={!file || isUploading}>
-              {isUploading ? '업로드 중' : '시트 업로드'}
+              {isUploading ? (
+                <>
+                  <DoubleBounceLoader size={18} variant="light" label="시트 업로드 중" />
+                  <span>업로드 중</span>
+                </>
+              ) : (
+                '시트 업로드'
+              )}
             </button>
           </form>
 

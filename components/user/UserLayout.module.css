@@ -12,7 +12,6 @@
   display: flex;
   width: 100%;
   min-width: 1280px;
-  max-width: 1920px;
   min-height: calc(100vh - 200px);
   flex: 1 0 auto;
   align-items: stretch;
@@ -132,6 +131,6 @@ div.navItem {
   min-width: 0;
   flex: 1 1 auto;
   flex-direction: column;
-  overflow-x: auto;
+  overflow-x: hidden;
   padding: 52px 20px;
 }

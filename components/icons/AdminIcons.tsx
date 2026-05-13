@@ -7,7 +7,7 @@ export function MemberListIcon({ className }: IconProps) {
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path
         d="M2.15845 13C3.04205 11.5262 4.97863 10.5175 7.99996 10.5175C11.0213 10.5175 12.9579 11.5262 13.8415 13M10.4 5.4C10.4 6.72548 9.32545 7.8 7.99996 7.8C6.67448 7.8 5.59996 6.72548 5.59996 5.4C5.59996 4.07452 6.67448 3 7.99996 3C9.32545 3 10.4 4.07452 10.4 5.4Z"
-        stroke="#1084FE"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />

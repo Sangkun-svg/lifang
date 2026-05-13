@@ -1,4 +1,4 @@
-export type AdminRequestStatus = '신규요청' | '처리중' | '처리완료';
+export type AdminRequestStatus = '신규요청' | '처리중' | '처리완료' | '반려';
 
 export type AdminRequest = {
   companyName: string;

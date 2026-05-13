@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 
 import { CalendarIcon, ChevronDownIcon } from '@/components/icons/AdminIcons';
+import { DoubleBounceLoader } from '@/components/ui/DoubleBounceLoader';
 import { UserLayout } from '@/components/user/UserLayout';
 import type { ApiResponse } from '@/lib/api/responses';
 import { getUserSessionUser } from '@/lib/auth/user';
@@ -183,6 +184,7 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
       {}
     )
   );
+  const [requestingById, setRequestingById] = useState<Record<string, boolean>>({});
   const [requestError, setRequestError] = useState('');
 
   const filteredItems = useMemo(
@@ -204,6 +206,10 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
   };
 
   const handleBlockRequest = async (itemId: string, checked: boolean) => {
+    if (requestingById[itemId]) {
+      return;
+    }
+
     setRequestedById((requests) => ({
       ...requests,
       [itemId]: checked,
@@ -213,6 +219,11 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
     if (!checked) {
       return;
     }
+
+    setRequestingById((requests) => ({
+      ...requests,
+      [itemId]: true,
+    }));
 
     try {
       const response = await fetch('/api/user/requests', {
@@ -240,6 +251,11 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
         [itemId]: false,
       }));
       setRequestError('요청 저장 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setRequestingById((requests) => ({
+        ...requests,
+        [itemId]: false,
+      }));
     }
   };
 
@@ -312,6 +328,7 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
               {visibleItems.map((item, index) => {
                 const rowStatus = getRowStatus(item, requestedById);
                 const isRequested = requestedById[item.id] ?? item.blockRequested;
+                const isRequesting = requestingById[item.id] ?? false;
                 const rowNumber = String((page - 1) * productHistoryPageSize + index + 1).padStart(2, '0');
 
                 return (
@@ -340,11 +357,19 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
                         <input
                           checked={isRequested}
                           className={styles.checkboxInput}
+                          disabled={isRequesting}
                           type="checkbox"
                           onChange={(event) => handleBlockRequest(item.id, event.target.checked)}
                           aria-label={`${rowNumber}번 차단 신청`}
                         />
                         <span className={styles.checkboxMark} />
+                        {isRequesting ? (
+                          <DoubleBounceLoader
+                            className={styles.checkboxLoader}
+                            size={18}
+                            label={`${rowNumber}번 차단 신청 저장 중`}
+                          />
+                        ) : null}
                       </label>
                     </span>
                     <span className={styles.detailCell}>

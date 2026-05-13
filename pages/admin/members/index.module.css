@@ -18,8 +18,10 @@
 
 .filters {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 20px;
+  overflow-x: auto;
 }
 
 .dateFilter,
@@ -68,7 +70,11 @@
 .dateBox {
   width: 100%;
   padding: 0 16px;
-  font: inherit;
+  font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: -0.21px;
   cursor: pointer;
 }
 
@@ -99,7 +105,6 @@
 .searchBox {
   width: 220px;
   padding: 0 14px 0 16px;
-  gap: 16px;
 }
 
 .searchInput {
@@ -140,16 +145,17 @@
 
 .tableCard {
   width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border-radius: 16px;
 }
 
 .tableHeader,
 .tableRow {
   display: grid;
+  width: max(100%, 1128px);
   grid-template-columns: 104px 176px 152px 280px minmax(320px, 1fr) 96px;
   align-items: center;
-  min-width: 1128px;
 }
 
 .tableHeader {

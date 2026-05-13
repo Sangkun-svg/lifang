@@ -1,9 +1,10 @@
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { getAdminRequests } from '@/lib/admin/requests';
+import { demoAdminRequests, getAdminRequests } from '@/lib/admin/requests';
 import { getSheetSummaries } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
 import type { AdminRequest } from '@/types/adminRequest';
@@ -16,6 +17,17 @@ type AdminRequestsPageProps = {
   sheetSummaries: SheetSummary[];
   user: AdminSessionUser;
 };
+
+type RequestSortField = 'createdAtDesc' | 'createdAtAsc' | 'platform' | 'user' | 'name' | 'status';
+
+const requestSortOptions: Array<{ label: string; value: RequestSortField }> = [
+  { label: '날짜순 최신', value: 'createdAtDesc' },
+  { label: '날짜순 오래된', value: 'createdAtAsc' },
+  { label: '플랫폼순', value: 'platform' },
+  { label: '유저순', value: 'user' },
+  { label: '이름순', value: 'name' },
+  { label: '상태순', value: 'status' },
+];
 
 function formatDateTime(value: string) {
   if (!value) {
@@ -30,8 +42,6 @@ function formatDateTime(value: string) {
 
   return new Intl.DateTimeFormat('ko-KR', {
     day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
     month: '2-digit',
     year: '2-digit',
   }).format(date);
@@ -54,7 +64,7 @@ export const getServerSideProps: GetServerSideProps<AdminRequestsPageProps> = as
 
     return {
       props: {
-        requests,
+        requests: requests.length > 0 ? requests : demoAdminRequests,
         sheetSummaries,
         user,
       },
@@ -64,7 +74,7 @@ export const getServerSideProps: GetServerSideProps<AdminRequestsPageProps> = as
 
     return {
       props: {
-        requests: [],
+        requests: demoAdminRequests,
         sheetSummaries: [],
         user,
       },
@@ -73,6 +83,33 @@ export const getServerSideProps: GetServerSideProps<AdminRequestsPageProps> = as
 };
 
 export default function AdminRequestsPage({ requests, sheetSummaries }: AdminRequestsPageProps) {
+  const [sortField, setSortField] = useState<RequestSortField>('createdAtDesc');
+  const visibleRequests = useMemo(() => {
+    return [...requests].sort((first, second) => {
+      if (sortField === 'createdAtDesc') {
+        return new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime();
+      }
+
+      if (sortField === 'createdAtAsc') {
+        return new Date(first.createdAt).getTime() - new Date(second.createdAt).getTime();
+      }
+
+      if (sortField === 'platform') {
+        return first.platform.localeCompare(second.platform, 'ko-KR');
+      }
+
+      if (sortField === 'user') {
+        return first.userEmail.localeCompare(second.userEmail, 'ko-KR');
+      }
+
+      if (sortField === 'name') {
+        return first.productName.localeCompare(second.productName, 'ko-KR');
+      }
+
+      return first.status.localeCompare(second.status, 'ko-KR');
+    });
+  }, [requests, sortField]);
+
   return (
     <>
       <Head>
@@ -83,7 +120,19 @@ export default function AdminRequestsPage({ requests, sheetSummaries }: AdminReq
         <div className={styles.page}>
           <header className={styles.header}>
             <h1 className={styles.title}>최근 요청</h1>
-            <p className={styles.count}>총 {requests.length.toLocaleString('ko-KR')}건</p>
+            <div className={styles.headerControls}>
+              <label className={styles.sortGroup}>
+                <span>필터</span>
+                <select value={sortField} onChange={(event) => setSortField(event.target.value as RequestSortField)}>
+                  {requestSortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className={styles.count}>총 {requests.length.toLocaleString('ko-KR')}건</p>
+            </div>
           </header>
 
           <section className={styles.tableCard} aria-label="최근 요청 테이블">
@@ -98,8 +147,8 @@ export default function AdminRequestsPage({ requests, sheetSummaries }: AdminReq
             </div>
 
             <div className={styles.rows}>
-              {requests.length > 0 ? (
-                requests.map((request) => (
+              {visibleRequests.length > 0 ? (
+                visibleRequests.map((request) => (
                   <div className={styles.tableRow} key={request.id}>
                     <span className={styles.dateCell}>{formatDateTime(request.createdAt)}</span>
                     <span className={styles.userCell}>{request.userEmail}</span>

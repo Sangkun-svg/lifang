@@ -1,5 +1,7 @@
 import { MouseEvent, useEffect, useMemo, useState } from 'react';
 
+import { DoubleBounceLoader } from '@/components/ui/DoubleBounceLoader';
+
 import styles from './DesignFeedbackWidget.module.css';
 
 type ElementSnapshot = {
@@ -221,7 +223,14 @@ export function DesignFeedbackWidget() {
               다시 선택
             </button>
             <button type="button" onClick={saveFeedback} disabled={!comment.trim() || isSaving}>
-              {isSaving ? '저장 중' : '저장'}
+              {isSaving ? (
+                <>
+                  <DoubleBounceLoader size={16} variant="light" label="피드백 저장 중" />
+                  <span>저장 중</span>
+                </>
+              ) : (
+                '저장'
+              )}
             </button>
           </div>
         </section>

@@ -60,7 +60,6 @@ const defaultStartMonth = '2025-07';
 const defaultEndMonth = '2026-04';
 const platformNames = ['타오바오', '알리익스프레스', '핀둬둬', '1688', '징동 닷컴', '티몰', '쇼피', '라자다', '이베이', '기타'];
 const platformColors = ['#ff2b3a', '#1084fe', '#ff932e', '#ffb15a', '#ffbe75', '#ffca8d', '#ffd4a4', '#ffdfbd', '#ffe8d3', '#4f5459'];
-const percentPositionClasses = [styles.percentBlue, styles.percentOrange, styles.percentRed];
 
 const baseMonthlyData: MonthlyDatum[] = [
   { month: '01', counterfeit: 264, blocked: 138 },
@@ -220,10 +219,12 @@ function getDashboardData(filters: AppliedFilters, selectedYear: string) {
         month: datum.month,
       };
     }),
-    percentLabels: platformData.slice(0, 3).map((platform) => ({
-      color: platform.color,
-      label: totalPlatformCount > 0 ? `${Math.round((platform.count / totalPlatformCount) * 100)}%` : '0%',
-    })),
+    platformPercentByName: Object.fromEntries(
+      platformData.map((platform) => [
+        platform.name,
+        totalPlatformCount > 0 ? `${Math.round((platform.count / totalPlatformCount) * 100)}%` : '0%',
+      ])
+    ) as Record<string, string>,
     platformData,
     shopRanks: buildShopRanks(filters.product, platformData, totalSearchCount),
     stats: [
@@ -432,21 +433,14 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
                     aria-label="플랫폼 별 비율 차트"
                     style={{ background: dashboardData.donutGradient }}
                   >
-                    {dashboardData.percentLabels.map((percent, index) => (
-                      <span
-                        className={`${styles.percentLabel} ${percentPositionClasses[index]}`}
-                        key={`${percent.label}-${index}`}
-                        style={{ color: percent.color }}
-                      >
-                        {percent.label}
-                      </span>
-                    ))}
+                    <span className={styles.donutCenterText}>플랫폼별 비율</span>
                   </div>
                   <div className={styles.legend}>
                     {dashboardData.platformData.map((platform, index) => (
                       <div className={styles.legendItem} key={`${platform.name}-${index}`}>
                         <span className={styles.legendDot} style={{ background: platform.color }} />
                         <span className={styles.legendName}>{platform.name}</span>
+                        <span className={styles.legendPercent}>{dashboardData.platformPercentByName[platform.name]}</span>
                         <span className={styles.legendCount}>{platform.count.toLocaleString('ko-KR')}건</span>
                       </div>
                     ))}
@@ -510,7 +504,7 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
 
           <div className={styles.chartArea}>
             <div className={styles.gridLines} aria-hidden="true">
-              {Array.from({ length: 17 }).map((_, index) => (
+              {Array.from({ length: 21 }).map((_, index) => (
                 <span key={index} />
               ))}
             </div>

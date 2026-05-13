@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { FormEvent, useMemo, useState } from 'react';
 
 import { Footer } from '@/components/Footer';
+import { DoubleBounceLoader } from '@/components/ui/DoubleBounceLoader';
 import type { ApiResponse } from '@/lib/api/responses';
 
 import styles from './LoginPage.module.css';
@@ -146,7 +147,14 @@ export function LoginPage({
               type="submit"
               disabled={!canSubmit || isSubmitting}
             >
-              {isSubmitting ? '로그인 중' : '로그인'}
+              {isSubmitting ? (
+                <>
+                  <DoubleBounceLoader size={18} variant="light" label="로그인 처리 중" />
+                  <span>로그인 중</span>
+                </>
+              ) : (
+                '로그인'
+              )}
             </button>
           </form>
         </section>

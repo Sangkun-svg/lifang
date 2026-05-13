@@ -5,10 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start": "next start",
+    "test:e2e": "playwright test",
+    "test:e2e:prod": "pnpm build && playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
+    "lucide-react": "^1.14.0",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
@@ -16,6 +20,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",

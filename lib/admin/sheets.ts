@@ -12,19 +12,18 @@ type SheetUploadRow = {
 };
 
 type SheetRecordRow = {
-  category: string | null;
-  company_name: string | null;
+  block_status_text: string | null;
   created_at: string | null;
   id: string;
-  image_url: string | null;
+  infringing_product_image_url: string | null;
+  infringing_product_url: string | null;
   platform: string | null;
-  price: string | null;
+  price_raw: string | null;
   product_name: string | null;
   sales_count: number | null;
-  sales_url: string | null;
   search_date: string | null;
+  seller_name: string | null;
   sheet_id: string | null;
-  status: string | null;
 };
 
 export type CreateSheetRecordInput = {
@@ -72,27 +71,27 @@ function mapSheetRecord(row: SheetRecordRow): SheetRecord {
   const searchDate = row.search_date ?? '';
 
   return {
-    category: row.category ?? '',
-    companyName: row.company_name ?? '',
+    category: row.platform ?? '',
+    companyName: row.seller_name ?? '',
     createdAt: row.created_at ?? '',
     displayDate: formatDisplayDate(searchDate),
     id: row.id,
-    imageUrl: row.image_url ?? '',
-    platform: row.platform ?? row.category ?? '',
-    price: row.price ?? '',
+    imageUrl: row.infringing_product_image_url ?? '',
+    platform: row.platform ?? '',
+    price: row.price_raw ?? '',
     productName: row.product_name ?? '',
     salesCount: row.sales_count ?? 0,
-    salesUrl: row.sales_url ?? '',
+    salesUrl: row.infringing_product_url ?? '',
     searchDate,
     sheetId: row.sheet_id ?? '',
-    status: normalizeSheetRecordStatus(row.status),
+    status: normalizeSheetRecordStatus(row.block_status_text),
   };
 }
 
 export async function getSheetSummaries(client?: SupabaseClient) {
   const supabase = client ?? createServerDatabaseClient();
   const { data, error } = await supabase
-    .from('sheet_uploads')
+    .from('sheets')
     .select('id,name,original_file_name,record_count,created_at')
     .order('created_at', { ascending: false });
 
@@ -106,7 +105,7 @@ export async function getSheetSummaries(client?: SupabaseClient) {
 export async function getSheetSummaryById(id: string) {
   const supabase = createServerDatabaseClient();
   const { data, error } = await supabase
-    .from('sheet_uploads')
+    .from('sheets')
     .select('id,name,original_file_name,record_count,created_at')
     .eq('id', id)
     .maybeSingle();
@@ -123,7 +122,7 @@ export async function getSheetRecords(sheetId: string) {
   const { data, error } = await supabase
     .from('sheet_records')
     .select(
-      'id,sheet_id,image_url,product_name,sales_url,category,platform,company_name,price,sales_count,status,search_date,created_at'
+      'id,sheet_id,infringing_product_image_url,product_name,infringing_product_url,platform,seller_name,price_raw,sales_count,block_status_text,search_date,created_at'
     )
     .eq('sheet_id', sheetId)
     .order('row_index', { ascending: true });
@@ -146,7 +145,7 @@ export async function createSheetUpload({
 }) {
   const supabase = createServerDatabaseClient();
   const { data: sheetData, error: sheetError } = await supabase
-    .from('sheet_uploads')
+    .from('sheets')
     .insert({
       name,
       original_file_name: originalFileName,
@@ -164,18 +163,29 @@ export async function createSheetUpload({
   if (records.length > 0) {
     const { error: recordsError } = await supabase.from('sheet_records').insert(
       records.map((record, index) => ({
-        category: record.category,
-        company_name: record.companyName,
-        image_url: record.imageUrl,
+        block_status_text: record.status,
+        infringing_product_image_url: record.imageUrl,
+        infringing_product_url: record.salesUrl,
         platform: record.platform,
-        price: record.price,
+        price_raw: record.price,
         product_name: record.productName,
         row_index: index + 1,
         sales_count: record.salesCount,
-        sales_url: record.salesUrl,
         search_date: record.searchDate,
+        seller_name: record.companyName,
         sheet_id: sheet.id,
-        status: record.status,
+        raw_record: {
+          category: record.category,
+          companyName: record.companyName,
+          imageUrl: record.imageUrl,
+          platform: record.platform,
+          price: record.price,
+          productName: record.productName,
+          salesCount: record.salesCount,
+          salesUrl: record.salesUrl,
+          searchDate: record.searchDate,
+          status: record.status,
+        },
       }))
     );
 

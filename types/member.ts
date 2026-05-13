@@ -6,4 +6,5 @@ export type Member = {
   managerName: string;
   email: string;
   sheetLinks: string[];
+  sheetNames: string[];
 };

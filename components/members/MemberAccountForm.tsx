@@ -53,6 +53,7 @@ export function MemberAccountForm({ mode, member, sheetSummaries = [] }: MemberA
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isPasswordConfirmVisible, setIsPasswordConfirmVisible] = useState(false);
   const [sheetSearch, setSheetSearch] = useState('');
+  const [isSheetDropdownOpen, setIsSheetDropdownOpen] = useState(false);
 
   const isCreateMode = mode === 'create';
   const selectedSheets = useMemo(
@@ -95,7 +96,8 @@ export function MemberAccountForm({ mode, member, sheetSummaries = [] }: MemberA
       selectedSheetIds: current.selectedSheetIds.includes(sheetId) ? current.selectedSheetIds : [...current.selectedSheetIds, sheetId],
     }));
     setSheetSearch('');
-  }
+    setIsSheetDropdownOpen(false);
+  };
 
   const removeSheet = (sheetId: string) => {
     setForm((current) => ({
@@ -203,22 +205,21 @@ export function MemberAccountForm({ mode, member, sheetSummaries = [] }: MemberA
                   type="search"
                   value={sheetSearch}
                   onChange={(event) => setSheetSearch(event.target.value)}
+                  onFocus={() => setIsSheetDropdownOpen(true)}
                   placeholder="업로드된 시트를 검색해주세요."
                 />
-                <div className={styles.sheetDropdown}>
-                  {availableSheets.length > 0 ? (
-                    availableSheets.slice(0, 6).map((sheet) => (
-                      <button className={styles.sheetOption} type="button" key={sheet.id} onClick={() => selectSheet(sheet.id)}>
-                        <span>{sheet.name}</span>
-                        <small>{sheet.recordCount.toLocaleString('ko-KR')}건</small>
-                      </button>
-                    ))
-                  ) : (
-                    <p className={styles.sheetEmpty}>
-                      {sheetSummaries.length > 0 ? '검색 결과가 없습니다.' : '먼저 어드민에서 시트를 업로드해주세요.'}
-                    </p>
-                  )}
-                </div>
+                {isSheetDropdownOpen ? (
+                  <div className={styles.sheetDropdown} data-empty={availableSheets.length === 0}>
+                    {availableSheets.length > 0
+                      ? availableSheets.slice(0, 6).map((sheet) => (
+                          <button className={styles.sheetOption} type="button" key={sheet.id} onClick={() => selectSheet(sheet.id)}>
+                            <span>{sheet.name}</span>
+                            <small>{sheet.recordCount.toLocaleString('ko-KR')}건</small>
+                          </button>
+                        ))
+                      : <p className={styles.sheetEmpty}>선택 가능한 시트가 없습니다.</p>}
+                  </div>
+                ) : null}
               </div>
 
               {selectedSheets.length > 0 ? (

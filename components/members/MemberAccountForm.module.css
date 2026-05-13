@@ -160,31 +160,66 @@
 
 .sheetDropdown {
   display: flex;
+  min-height: 96px;
   flex-direction: column;
-  gap: 8px;
+  overflow: hidden;
+  border: 1px solid #f0f2f4;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgb(36 40 44 / 6%);
+}
+
+.sheetDropdown[data-empty="true"] {
+  min-height: 96px;
+}
+
+.sheetEmpty {
+  display: flex;
+  min-height: 96px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: #9ba3aa;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: -0.21px;
 }
 
 .sheetOption {
   display: flex;
-  min-height: 52px;
+  height: 48px;
+  min-height: 48px;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 16px;
-  border: 1px solid #f0f2f4;
-  border-radius: 16px;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 1px solid #f0f2f4;
+  border-radius: 0;
   background: #ffffff;
   color: #24282c;
   text-align: left;
   cursor: pointer;
 }
 
+.sheetOption:first-child,
+.sheetOption:hover {
+  background: #e8f3ff;
+  color: #1084fe;
+}
+
+.sheetOption:last-child {
+  border-bottom: 0;
+}
+
 .sheetOption span {
   min-width: 0;
   overflow: hidden;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 21px;
+  letter-spacing: -0.21px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -195,18 +230,6 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 18px;
-}
-
-.sheetEmpty {
-  margin: 0;
-  padding: 12px 16px;
-  border: 1px solid #f0f2f4;
-  border-radius: 16px;
-  background: #ffffff;
-  color: #9ba3aa;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 21px;
 }
 
 .selectedSheets {

@@ -2,13 +2,13 @@ import { createClient } from '@supabase/supabase-js';
 
 export function createServerDatabaseClient() {
   const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !supabaseKey) {
+  if (!supabaseUrl || !supabaseSecretKey) {
     throw new Error('Supabase database environment variables are not configured.');
   }
 
-  return createClient(supabaseUrl, supabaseKey, {
+  return createClient(supabaseUrl, supabaseSecretKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

@@ -183,8 +183,8 @@ export default function AdminMembersPage({ members, sheetSummaries }: AdminMembe
                 <span className={styles.managerCell}>{member.managerName}</span>
                 <span className={styles.emailCell}>{member.email}</span>
                 <span className={styles.sheetCell}>
-                  <span className={styles.sheetUrl}>{member.sheetLinks[0]}</span>
-                  <span className={styles.sheetCount}>외{member.sheetLinks.length}</span>
+                  <span className={styles.sheetUrl}>{member.sheetNames[0] ?? '-'}</span>
+                  {member.sheetNames.length > 1 ? <span className={styles.sheetCount}>외{member.sheetNames.length - 1}</span> : null}
                 </span>
                 <Link className={styles.actionCell} href={`/admin/members/${member.id}`}>
                   보기
