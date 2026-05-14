@@ -33,25 +33,57 @@ function stripHeaderQuotes(value: string) {
   return value.trim().replace(/^"|"$/g, '');
 }
 
+function tryDecodeURIComponent(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+function tryDecodeUtf8HeaderValue(value: string) {
+  const decodedValue = Buffer.from(value, 'latin1').toString('utf8');
+
+  return decodedValue.includes('\uFFFD') ? null : decodedValue;
+}
+
 function decodeHeaderFileName(value: string) {
   const strippedValue = stripHeaderQuotes(value);
+  const percentDecodedValue = strippedValue.includes('%') ? tryDecodeURIComponent(strippedValue) : null;
 
-  try {
-    return decodeURIComponent(strippedValue);
-  } catch {
-    return Buffer.from(strippedValue, 'latin1').toString('utf8');
+  if (percentDecodedValue) {
+    return percentDecodedValue;
   }
+
+  return tryDecodeUtf8HeaderValue(strippedValue) ?? strippedValue;
 }
 
 function decodeExtendedHeaderFileName(value: string) {
   const strippedValue = stripHeaderQuotes(value);
   const encodedValue = strippedValue.toLowerCase().startsWith("utf-8''") ? strippedValue.slice(7) : strippedValue;
+  const percentDecodedValue = encodedValue.includes('%') ? tryDecodeURIComponent(encodedValue) : null;
 
-  try {
-    return decodeURIComponent(encodedValue);
-  } catch {
-    return decodeHeaderFileName(encodedValue);
+  if (percentDecodedValue) {
+    return percentDecodedValue;
   }
+
+  return decodeHeaderFileName(encodedValue);
+}
+
+function getFileNameWithoutExtension(fileName: string) {
+  const baseFileName = fileName.split(/[\\/]/).pop() ?? fileName;
+
+  return baseFileName.replace(/\.[^.]+$/, '').trim();
+}
+
+function getUploadSheetName(inputSheetName: string | undefined, fileName: string) {
+  const explicitSheetName = inputSheetName?.trim();
+
+  if (explicitSheetName) {
+    return explicitSheetName;
+  }
+
+  return getFileNameWithoutExtension(fileName) || '업로드 시트';
 }
 
 function parseContentDisposition(value: string) {
@@ -190,7 +222,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       return sendFailure(res, 400, 'EMPTY_SHEET', '저장할 수 있는 시트 데이터가 없습니다.');
     }
 
-    sheetName = form.fields.get('sheetName') || form.file.fileName.replace(/\.[^.]+$/, '') || '업로드 시트';
+    sheetName = getUploadSheetName(form.fields.get('sheetName'), form.file.fileName);
     const sheet = await createSheetUpload({
       name: sheetName,
       originalFileName: form.file.fileName,
