@@ -88,6 +88,11 @@
   color: #4f5459;
 }
 
+.input[data-invalid="true"],
+.inputWithAction[data-invalid="true"] {
+  border-color: #ff2b3a;
+}
+
 .input::placeholder {
   color: #9ba3aa;
   opacity: 1;
@@ -293,6 +298,7 @@
 }
 
 .submitButton {
+  gap: 8px;
   border: 0;
   background: #9ba3aa;
   color: #fefefe;
@@ -305,12 +311,38 @@
 }
 
 .deleteButton {
+  gap: 8px;
   border: 1px solid #f0f2f4;
   background: #ffffff;
   color: #24282c;
+  cursor: pointer;
+}
+
+.submitButton:disabled,
+.deleteButton:disabled {
+  cursor: default;
+  opacity: 0.72;
 }
 
 .actionRow {
   display: flex;
   gap: 8px;
+}
+
+.errorMessage {
+  margin: -16px 0 0;
+  color: #ff2b3a;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.13px;
+}
+
+.successMessage {
+  margin: -16px 0 0;
+  color: #1084fe;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.13px;
 }

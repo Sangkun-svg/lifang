@@ -126,6 +126,18 @@ div.navItem {
   background: #1084fe;
 }
 
+.productEmpty {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  margin: 0;
+  padding: 8px 16px 8px 37px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
 .content {
   display: flex;
   min-width: 0;

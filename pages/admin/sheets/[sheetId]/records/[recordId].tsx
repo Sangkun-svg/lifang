@@ -6,16 +6,15 @@ import { FormEvent, useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { DoubleBounceLoader } from '@/components/ui/DoubleBounceLoader';
 import type { ApiResponse } from '@/lib/api/responses';
-import { getAdminRequestById } from '@/lib/admin/requests';
-import { getSheetSummaries } from '@/lib/admin/sheets';
+import { getSheetRecordById, getSheetSummaries, getSheetSummaryById } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
-import type { AdminRequest, AdminRequestStatus } from '@/types/adminRequest';
-import type { SheetSummary } from '@/types/sheet';
+import type { SheetRecord, SheetRecordStatus, SheetSummary } from '@/types/sheet';
 
-import styles from './detail.module.css';
+import styles from '@/pages/admin/requests/detail.module.css';
 
-type AdminRequestDetailPageProps = {
-  request: AdminRequest;
+type AdminSheetRecordDetailPageProps = {
+  record: SheetRecord;
+  sheet: SheetSummary;
   sheetSummaries: SheetSummary[];
   user: AdminSessionUser;
 };
@@ -25,8 +24,8 @@ type InfoRow = {
   value: string;
 };
 
-type EditableRequestFields = Pick<
-  AdminRequest,
+type EditableSheetRecordFields = Pick<
+  SheetRecord,
   | 'blockApproval'
   | 'blockObjection'
   | 'blockObjectionDecision'
@@ -36,18 +35,16 @@ type EditableRequestFields = Pick<
   | 'blockReport'
   | 'blockRereport'
   | 'blockRereportRejectionReason'
-  | 'blockStatus'
   | 'status'
 >;
 
-type UpdateRequestResponse = {
-  request: AdminRequest;
+type UpdateSheetRecordResponse = {
+  record: SheetRecord;
 };
 
-const requestStatusOptions: AdminRequestStatus[] = ['신규요청', '처리중', '처리완료', '반려'];
-const blockStatusOptions = ['미신청', '신고완료', '차단완료'];
+const blockStatusOptions: SheetRecordStatus[] = ['미신청', '신고완료', '차단완료'];
 const customInputOption = '__custom__';
-const requestFieldOptions = {
+const sheetRecordFieldOptions = {
   blockApproval: ['승인', '미승인'],
   blockObjection: ['이의신청', '이의신청 중'],
   blockObjectionDecision: ['승인'],
@@ -55,7 +52,7 @@ const requestFieldOptions = {
   blockReapproval: ['승인', '미승인'],
   blockReport: ['신청', '완료', '반려'],
   blockRereport: ['신청', '완료', '반려'],
-} satisfies Partial<Record<keyof EditableRequestFields, string[]>>;
+} satisfies Partial<Record<keyof EditableSheetRecordFields, string[]>>;
 
 function InfoSection({ rows, title }: { rows: InfoRow[]; title: string }) {
   return (
@@ -65,7 +62,7 @@ function InfoSection({ rows, title }: { rows: InfoRow[]; title: string }) {
         {rows.map((row) => (
           <div className={styles.infoRow} key={row.label}>
             <dt>{row.label}</dt>
-            <dd>{row.value}</dd>
+            <dd>{row.value || '-'}</dd>
           </div>
         ))}
       </dl>
@@ -73,19 +70,18 @@ function InfoSection({ rows, title }: { rows: InfoRow[]; title: string }) {
   );
 }
 
-function createEditableFields(request: AdminRequest): EditableRequestFields {
+function createEditableFields(record: SheetRecord): EditableSheetRecordFields {
   return {
-    blockApproval: request.blockApproval,
-    blockObjection: request.blockObjection,
-    blockObjectionDecision: request.blockObjectionDecision,
-    blockObjectionReason: request.blockObjectionReason,
-    blockReapproval: request.blockReapproval,
-    blockRejectionReason: request.blockRejectionReason,
-    blockReport: request.blockReport,
-    blockRereport: request.blockRereport,
-    blockRereportRejectionReason: request.blockRereportRejectionReason,
-    blockStatus: request.blockStatus || '미신청',
-    status: request.status,
+    blockApproval: record.blockApproval,
+    blockObjection: record.blockObjection,
+    blockObjectionDecision: record.blockObjectionDecision,
+    blockObjectionReason: record.blockObjectionReason,
+    blockReapproval: record.blockReapproval,
+    blockRejectionReason: record.blockRejectionReason,
+    blockReport: record.blockReport,
+    blockRereport: record.blockRereport,
+    blockRereportRejectionReason: record.blockRereportRejectionReason,
+    status: record.status,
   };
 }
 
@@ -98,9 +94,9 @@ function EditableRow({
   value,
 }: {
   allowCustom?: boolean;
-  field: keyof EditableRequestFields;
+  field: keyof EditableSheetRecordFields;
   label: string;
-  onChange: (field: keyof EditableRequestFields, value: string) => void;
+  onChange: (field: keyof EditableSheetRecordFields, value: string) => void;
   options?: string[];
   value: string;
 }) {
@@ -167,7 +163,11 @@ function EditableRow({
   );
 }
 
-export const getServerSideProps: GetServerSideProps<AdminRequestDetailPageProps> = async ({ query, req, res }) => {
+function getQueryValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export const getServerSideProps: GetServerSideProps<AdminSheetRecordDetailPageProps> = async ({ query, req, res }) => {
   const user = await getAdminSessionUser(req, res);
 
   if (!user) {
@@ -179,80 +179,76 @@ export const getServerSideProps: GetServerSideProps<AdminRequestDetailPageProps>
     };
   }
 
-  const requestId = Array.isArray(query.requestId) ? query.requestId[0] : query.requestId;
+  const sheetId = getQueryValue(query.sheetId);
+  const recordId = getQueryValue(query.recordId);
 
-  if (!requestId) {
+  if (!sheetId || !recordId) {
     return {
       redirect: {
-        destination: '/admin/requests',
+        destination: '/admin/sheets',
         permanent: false,
       },
     };
   }
 
   try {
-    const request = await getAdminRequestById(requestId);
+    const [sheet, record, sheetSummaries] = await Promise.all([
+      getSheetSummaryById(sheetId),
+      getSheetRecordById(sheetId, recordId),
+      getSheetSummaries(),
+    ]);
 
-    if (!request) {
+    if (!sheet || !record) {
       return {
         redirect: {
-          destination: '/admin/requests',
+          destination: sheet ? `/admin/sheets/${sheet.id}` : '/admin/sheets',
           permanent: false,
         },
       };
     }
 
-    let sheetSummaries: SheetSummary[] = [];
-
-    try {
-      sheetSummaries = await getSheetSummaries();
-    } catch (error) {
-      console.error('Load request detail sheet summaries failed', error);
-    }
-
     return {
       props: {
-        request,
+        record,
+        sheet,
         sheetSummaries,
         user,
       },
     };
   } catch (error) {
-    console.error('Load admin request detail failed', error);
+    console.error('Load sheet record detail failed', error);
 
     return {
       redirect: {
-        destination: '/admin/requests',
+        destination: '/admin/sheets',
         permanent: false,
       },
     };
   }
 };
 
-export default function AdminRequestDetailPage({ request, sheetSummaries }: AdminRequestDetailPageProps) {
-  const [currentRequest, setCurrentRequest] = useState(request);
-  const [fields, setFields] = useState<EditableRequestFields>(() => createEditableFields(request));
+export default function AdminSheetRecordDetailPage({ record, sheet, sheetSummaries }: AdminSheetRecordDetailPageProps) {
+  const [currentRecord, setCurrentRecord] = useState(record);
+  const [fields, setFields] = useState<EditableSheetRecordFields>(() => createEditableFields(record));
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const requestRows: InfoRow[] = [
-    { label: '요청자', value: currentRequest.userEmail || '-' },
-    { label: '요청 구분', value: currentRequest.requestType || '-' },
-    { label: '처리 상태', value: currentRequest.status },
-    { label: '검색 날짜', value: currentRequest.searchDate || '-' },
-    { label: '시트 레코드', value: currentRequest.sheetRecordId || '-' },
+  const sheetRows: InfoRow[] = [
+    { label: '시트명', value: sheet.name },
+    { label: '시트 레코드', value: currentRecord.id },
+    { label: '검색 날짜', value: currentRecord.searchDate },
+    { label: '매칭 상태', value: sheet.isMatched ? '매칭 완료' : sheet.deletionStatusLabel },
   ];
   const productRows: InfoRow[] = [
-    { label: '상품', value: currentRequest.product || '-' },
-    { label: '침해 제품명', value: currentRequest.productName || '-' },
-    { label: '침해 업체명', value: currentRequest.companyName || '-' },
-    { label: '침해 플랫폼', value: currentRequest.platform || '-' },
-    { label: '판매가', value: currentRequest.price || '-' },
-    { label: '판매수량', value: String(currentRequest.salesCount || '-') },
-    { label: '판매링크', value: currentRequest.salesUrl || '-' },
+    { label: '침해 플랫폼', value: currentRecord.platform || currentRecord.category },
+    { label: '침해 제품명', value: currentRecord.productName },
+    { label: '침해 업체명', value: currentRecord.companyName },
+    { label: '판매가', value: currentRecord.price },
+    { label: '판매수량', value: String(currentRecord.salesCount || '-') },
+    { label: '판매링크', value: currentRecord.salesUrl },
   ];
 
-  const handleFieldChange = (field: keyof EditableRequestFields, value: string) => {
+  const handleFieldChange = (field: keyof EditableSheetRecordFields, value: string) => {
     setFields((previousFields) => ({
       ...previousFields,
       [field]: value,
@@ -273,22 +269,34 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`/api/admin/requests/${encodeURIComponent(currentRequest.id)}`, {
-        body: JSON.stringify(fields),
+      const response = await fetch(`/api/admin/sheet-records/${encodeURIComponent(currentRecord.id)}`, {
+        body: JSON.stringify({
+          blockApproval: fields.blockApproval,
+          blockObjection: fields.blockObjection,
+          blockObjectionDecision: fields.blockObjectionDecision,
+          blockObjectionReason: fields.blockObjectionReason,
+          blockReapproval: fields.blockReapproval,
+          blockRejectionReason: fields.blockRejectionReason,
+          blockReport: fields.blockReport,
+          blockRereport: fields.blockRereport,
+          blockRereportRejectionReason: fields.blockRereportRejectionReason,
+          blockStatus: fields.status,
+          sheetId: sheet.id,
+        }),
         headers: {
           'Content-Type': 'application/json',
         },
         method: 'PATCH',
       });
-      const payload = (await response.json()) as ApiResponse<UpdateRequestResponse>;
+      const payload = (await response.json()) as ApiResponse<UpdateSheetRecordResponse>;
 
       if (!response.ok || !payload.ok) {
         setErrorMessage(payload.ok ? '저장 중 문제가 발생했습니다.' : payload.message);
         return;
       }
 
-      setCurrentRequest(payload.data.request);
-      setFields(createEditableFields(payload.data.request));
+      setCurrentRecord(payload.data.record);
+      setFields(createEditableFields(payload.data.record));
       setSuccessMessage('저장되었습니다.');
     } catch {
       setErrorMessage('저장 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
@@ -300,54 +308,44 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
   return (
     <>
       <Head>
-        <title>최근 요청 상세 | LIFANG INC.</title>
+        <title>{currentRecord.productName || sheet.name} | LIFANG INC.</title>
       </Head>
 
       <AdminLayout sheetSummaries={sheetSummaries}>
         <div className={styles.page}>
-          <form className={styles.card} id="request-detail-form" onSubmit={handleSubmit}>
+          <form className={styles.card} onSubmit={handleSubmit}>
             <header className={styles.header}>
               <div>
-                <p className={styles.eyebrow}>최근 요청</p>
-                <h1 className={styles.title}>{currentRequest.productName}</h1>
+                <p className={styles.eyebrow}>업로드 시트 상세</p>
+                <h1 className={styles.title}>{currentRecord.productName || sheet.name}</h1>
               </div>
-              <span className={styles.status} data-status={fields.status}>
-                {fields.status}
-              </span>
+              <span className={styles.status}>{fields.status}</span>
             </header>
 
-            {currentRequest.imageUrl ? (
-              <img className={styles.productImage} src={currentRequest.imageUrl} alt={`${currentRequest.productName} 제품`} />
+            {currentRecord.imageUrl ? (
+              <img className={styles.productImage} src={currentRecord.imageUrl} alt={`${currentRecord.productName} 제품`} />
             ) : null}
 
-            <InfoSection rows={requestRows} title="요청 정보" />
+            <InfoSection rows={sheetRows} title="시트 정보" />
             <div className={styles.divider} />
             <InfoSection rows={productRows} title="침해 상품 정보" />
             <div className={styles.divider} />
-
             <section className={styles.section}>
-              <h2>처리 정보</h2>
+              <h2>차단 정보</h2>
               <div className={styles.editList}>
                 <EditableRow
                   field="status"
-                  label="처리 상태"
-                  onChange={handleFieldChange}
-                  options={requestStatusOptions}
-                  value={fields.status}
-                />
-                <EditableRow
-                  field="blockStatus"
-                  label="차단 여부"
+                  label="진행 상황"
                   onChange={handleFieldChange}
                   options={blockStatusOptions}
-                  value={fields.blockStatus}
+                  value={fields.status}
                 />
                 <EditableRow
                   allowCustom
                   field="blockReport"
                   label="차단 신고"
                   onChange={handleFieldChange}
-                  options={requestFieldOptions.blockReport}
+                  options={sheetRecordFieldOptions.blockReport}
                   value={fields.blockReport}
                 />
                 <EditableRow
@@ -355,7 +353,7 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
                   field="blockApproval"
                   label="차단 신고 승인"
                   onChange={handleFieldChange}
-                  options={requestFieldOptions.blockApproval}
+                  options={sheetRecordFieldOptions.blockApproval}
                   value={fields.blockApproval}
                 />
                 <EditableRow
@@ -369,7 +367,7 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
                   field="blockObjection"
                   label="상대방 이의신청"
                   onChange={handleFieldChange}
-                  options={requestFieldOptions.blockObjection}
+                  options={sheetRecordFieldOptions.blockObjection}
                   value={fields.blockObjection}
                 />
                 <EditableRow
@@ -377,7 +375,7 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
                   field="blockObjectionDecision"
                   label="이의신청 승인"
                   onChange={handleFieldChange}
-                  options={requestFieldOptions.blockObjectionDecision}
+                  options={sheetRecordFieldOptions.blockObjectionDecision}
                   value={fields.blockObjectionDecision}
                 />
                 <EditableRow
@@ -385,7 +383,7 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
                   field="blockObjectionReason"
                   label="이의 신청"
                   onChange={handleFieldChange}
-                  options={requestFieldOptions.blockObjectionReason}
+                  options={sheetRecordFieldOptions.blockObjectionReason}
                   value={fields.blockObjectionReason}
                 />
                 <EditableRow
@@ -393,7 +391,7 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
                   field="blockRereport"
                   label="차단신고 (재)신고"
                   onChange={handleFieldChange}
-                  options={requestFieldOptions.blockRereport}
+                  options={sheetRecordFieldOptions.blockRereport}
                   value={fields.blockRereport}
                 />
                 <EditableRow
@@ -401,7 +399,7 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
                   field="blockReapproval"
                   label="차단신고 (재)신고 승인"
                   onChange={handleFieldChange}
-                  options={requestFieldOptions.blockReapproval}
+                  options={sheetRecordFieldOptions.blockReapproval}
                   value={fields.blockReapproval}
                 />
                 <EditableRow
@@ -420,23 +418,24 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
             ) : null}
             {successMessage ? <p className={styles.successMessage}>{successMessage}</p> : null}
 
+            <div className={styles.actions}>
+              <span />
+              <button className={styles.saveButton} type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <DoubleBounceLoader size={18} variant="light" label="시트 레코드 저장 중" />
+                    <span>저장 중</span>
+                  </>
+                ) : (
+                  '저장하기'
+                )}
+              </button>
+            </div>
           </form>
 
-          <div className={styles.actions}>
-            <Link className={styles.backButton} href="/admin/requests">
-              목록으로
-            </Link>
-            <button className={styles.saveButton} form="request-detail-form" type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <DoubleBounceLoader size={18} variant="light" label="요청 정보 저장 중" />
-                  <span>저장 중</span>
-                </>
-              ) : (
-                '저장하기'
-              )}
-            </button>
-          </div>
+          <Link className={styles.backButton} href={`/admin/sheets/${sheet.id}`}>
+            목록으로
+          </Link>
         </div>
       </AdminLayout>
     </>

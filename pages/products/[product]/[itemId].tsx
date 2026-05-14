@@ -4,20 +4,38 @@ import Link from 'next/link';
 
 import { Footer } from '@/components/Footer';
 import { getUserSessionUser } from '@/lib/auth/user';
-import { getProductFromParam, getProductHistoryItem, type ProductHistoryItem } from '@/lib/user/productHistory';
-import type { UserProduct } from '@/lib/user/products';
+import {
+  getProductFromParam,
+  getProductHistoryItem,
+  getProductLabel,
+  getScopedUserProductSummaries,
+  type ProductHistoryItem,
+  type UserProduct,
+} from '@/lib/user/productHistory';
 
 import styles from '../ProductHistory.module.css';
 
 type ProductHistoryDetailPageProps = {
   item: ProductHistoryItem;
   product: UserProduct;
+  productName: string;
 };
 
 type InfoRow = {
+  href?: string;
   label: string;
   value: string;
 };
+
+function getExternalHref(value: string) {
+  try {
+    const url = new URL(value);
+
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function StatusValue({ status }: { status: string }) {
   return (
@@ -36,7 +54,15 @@ function InfoSection({ rows, title }: { rows: InfoRow[]; title: string }) {
         {rows.map((row) => (
           <div className={styles.detailInfoRow} key={row.label}>
             <dt>{row.label}</dt>
-            <dd>{row.value}</dd>
+            <dd>
+              {row.href ? (
+                <a className={styles.detailExternalLink} href={row.href} target="_blank" rel="noreferrer">
+                  {row.value}
+                </a>
+              ) : (
+                row.value
+              )}
+            </dd>
           </div>
         ))}
       </dl>
@@ -56,13 +82,14 @@ export const getServerSideProps: GetServerSideProps<ProductHistoryDetailPageProp
     };
   }
 
-  const product = getProductFromParam(query.product);
-  const item = getProductHistoryItem(product, query.itemId);
+  const products = await getScopedUserProductSummaries(user);
+  const product = getProductFromParam(query.product, products);
+  const item = await getProductHistoryItem(product, query.itemId, products);
 
   if (!item) {
     return {
       redirect: {
-        destination: `/products/${encodeURIComponent(product)}`,
+        destination: product ? `/products/${encodeURIComponent(product)}` : '/dashboard',
         permanent: false,
       },
     };
@@ -72,18 +99,20 @@ export const getServerSideProps: GetServerSideProps<ProductHistoryDetailPageProp
     props: {
       item,
       product,
+      productName: getProductLabel(product, products),
     },
   };
 };
 
-export default function ProductHistoryDetailPage({ item, product }: ProductHistoryDetailPageProps) {
+export default function ProductHistoryDetailPage({ item, product, productName }: ProductHistoryDetailPageProps) {
+  const salesHref = getExternalHref(item.salesUrl);
   const productInfoRows: InfoRow[] = [
     { label: '침해 플랫폼', value: item.platform },
     { label: '침해 제품명', value: item.productName },
     { label: '침해 업체명', value: item.companyName },
     { label: '판매가', value: `${item.price}￥` },
     { label: '판매수량', value: String(item.salesCount) },
-    { label: '판매링크', value: item.salesUrl },
+    { href: salesHref, label: '판매링크', value: item.salesUrl },
   ];
   const blockInfoRows: InfoRow[] = [
     { label: '검색 날짜', value: item.searchDate.replaceAll('-', '. ') },
@@ -101,14 +130,14 @@ export default function ProductHistoryDetailPage({ item, product }: ProductHisto
   return (
     <>
       <Head>
-        <title>{product} 내역상세 | LIFANG INC.</title>
+        <title>{productName} 내역상세 | LIFANG INC.</title>
       </Head>
 
       <div className={styles.detailShell}>
         <main className={styles.detailPage}>
           <div className={styles.detailWrap}>
             <article className={styles.detailCard}>
-              <img className={styles.detailImage} src={item.imageUrl} alt={`${product} 침해 제품`} />
+              {item.imageUrl ? <img className={styles.detailImage} src={item.imageUrl} alt={`${productName} 침해 제품`} /> : null}
               <div className={styles.detailDivider} />
 
               <InfoSection rows={productInfoRows} title="침해 상품 정보" />

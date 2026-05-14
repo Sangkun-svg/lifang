@@ -1,4 +1,24 @@
+import type { GetServerSideProps } from 'next';
+
 import { LoginPage } from '@/components/auth/LoginPage';
+import { getAdminSessionUser } from '@/lib/auth/admin';
+
+export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
+  const user = await getAdminSessionUser(req, res);
+
+  if (user) {
+    return {
+      redirect: {
+        destination: '/admin',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {},
+  };
+};
 
 export default function AdminLoginPage() {
   return (

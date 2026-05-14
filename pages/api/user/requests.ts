@@ -5,8 +5,7 @@ import type { ApiResponse } from '@/lib/api/responses';
 import { sendFailure, sendSuccess } from '@/lib/api/responses';
 import { createAdminRequest } from '@/lib/admin/requests';
 import { getUserSessionUser } from '@/lib/auth/user';
-import { getProductHistoryItem, getProductFromParam } from '@/lib/user/productHistory';
-import { isUserProduct } from '@/lib/user/products';
+import { getProductHistoryItem, getScopedUserProductSummaries } from '@/lib/user/productHistory';
 import type { AdminRequest } from '@/types/adminRequest';
 
 const createRequestSchema = z.object({
@@ -32,12 +31,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   const parsedBody = createRequestSchema.safeParse(req.body);
 
-  if (!parsedBody.success || !isUserProduct(parsedBody.data.product)) {
+  if (!parsedBody.success) {
     return sendFailure(res, 400, 'INVALID_INPUT', '요청할 데이터를 확인해주세요.');
   }
 
-  const product = getProductFromParam(parsedBody.data.product);
-  const item = getProductHistoryItem(product, parsedBody.data.itemId);
+  const products = await getScopedUserProductSummaries(user);
+  const item = await getProductHistoryItem(parsedBody.data.product, parsedBody.data.itemId, products);
 
   if (!item) {
     return sendFailure(res, 404, 'ITEM_NOT_FOUND', '요청할 데이터를 찾을 수 없습니다.');
@@ -46,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   try {
     const request = await createAdminRequest({
       item,
-      product,
+      product: item.product,
       userEmail: user.email,
       userId: user.id,
     });

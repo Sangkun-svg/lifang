@@ -12,7 +12,7 @@ export function Footer() {
           <div className={styles.customerInfo}>
             <p className={styles.bold}>고객센터</p>
             <div className={styles.textBlock}>
-              <p>전화번호 : 010-0000-0000</p>
+              <p>전화번호 : 02-6959-0780</p>
               <p>주중 09~18시 (점심시간 12:00 ~ 13:30 / 주말 및 공휴일 제외)</p>
             </div>
           </div>

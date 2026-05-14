@@ -1,9 +1,31 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
 type Credentials = {
   email: string;
   password: string;
 };
+
+type ProtectedApiProbe = {
+  data?: Record<string, unknown>;
+  method: 'DELETE' | 'GET' | 'PATCH' | 'POST';
+  path: string;
+};
+
+const placeholderUuid = '00000000-0000-0000-0000-000000000000';
+const protectedAdminApiProbes: ProtectedApiProbe[] = [
+  { method: 'GET', path: '/api/admin/auth/me' },
+  { data: {}, method: 'POST', path: '/api/admin/members' },
+  { data: {}, method: 'PATCH', path: `/api/admin/members/${placeholderUuid}` },
+  { method: 'DELETE', path: `/api/admin/members/${placeholderUuid}` },
+  { data: {}, method: 'PATCH', path: `/api/admin/requests/${placeholderUuid}` },
+  { data: {}, method: 'PATCH', path: `/api/admin/sheet-records/${placeholderUuid}` },
+  { method: 'DELETE', path: `/api/admin/sheets/${placeholderUuid}` },
+  { method: 'POST', path: '/api/admin/sheets/cleanup' },
+  { method: 'POST', path: '/api/admin/sheets/upload' },
+];
+const protectedUserApiProbes: ProtectedApiProbe[] = [
+  { data: { itemId: placeholderUuid, product: placeholderUuid }, method: 'POST', path: '/api/user/requests' },
+];
 
 function getCredentials(prefix: 'ADMIN' | 'USER'): Credentials | null {
   const email = process.env[`LIFANG_E2E_${prefix}_EMAIL`];
@@ -21,6 +43,13 @@ async function login(page: Page, path: '/admin/login' | '/login', credentials: C
   await page.getByLabel('이메일').fill(credentials.email);
   await page.getByLabel('비밀번호').fill(credentials.password);
   await page.getByRole('button', { name: '로그인' }).click();
+}
+
+async function requestProtectedApi(request: APIRequestContext, probe: ProtectedApiProbe) {
+  return request.fetch(probe.path, {
+    data: probe.data,
+    method: probe.method,
+  });
 }
 
 async function expectNoDocumentHorizontalOverflow(page: Page) {
@@ -93,6 +122,30 @@ test.describe('production auth and access control', () => {
     });
 
     expect(response.status()).toBe(404);
+  });
+
+  test('protected admin API routes reject unauthenticated requests before validation or mutations', async ({ request }) => {
+    for (const probe of protectedAdminApiProbes) {
+      const response = await requestProtectedApi(request, probe);
+
+      expect(response.status(), `${probe.method} ${probe.path}`).toBe(401);
+      await expect(response.json(), `${probe.method} ${probe.path}`).resolves.toMatchObject({
+        ok: false,
+        code: 'UNAUTHORIZED',
+      });
+    }
+  });
+
+  test('protected user API routes reject unauthenticated requests before validation or mutations', async ({ request }) => {
+    for (const probe of protectedUserApiProbes) {
+      const response = await requestProtectedApi(request, probe);
+
+      expect(response.status(), `${probe.method} ${probe.path}`).toBe(401);
+      await expect(response.json(), `${probe.method} ${probe.path}`).resolves.toMatchObject({
+        ok: false,
+        code: 'UNAUTHORIZED',
+      });
+    }
   });
 
   test('admin credentials cannot sign in through the user login API', async ({ request }) => {

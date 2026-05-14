@@ -1,22 +1,28 @@
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 import { CalendarIcon, ChevronDownIcon } from '@/components/icons/AdminIcons';
 import { DoubleBounceLoader } from '@/components/ui/DoubleBounceLoader';
 import { UserLayout } from '@/components/user/UserLayout';
 import type { ApiResponse } from '@/lib/api/responses';
 import { getUserSessionUser } from '@/lib/auth/user';
+import { getInitialSearchDateRange } from '@/lib/date/defaultRange';
+import type { UserSessionUser } from '@/lib/auth/user';
 import {
   filterProductHistoryItems,
   getProductFromParam,
   getProductHistoryItems,
+  getProductLabel,
+  getScopedUserProductSummaries,
   productHistoryPageSize,
   type ProductHistoryItem,
   type ProductHistoryStatus,
+  type UserProduct,
+  type UserProductSummary,
 } from '@/lib/user/productHistory';
-import type { UserProduct } from '@/lib/user/products';
 import type { AdminRequest } from '@/types/adminRequest';
 
 import styles from '../ProductHistory.module.css';
@@ -25,6 +31,9 @@ type ProductHistoryListPageProps = {
   initialPage: number;
   items: ProductHistoryItem[];
   product: UserProduct;
+  productName: string;
+  products: UserProductSummary[];
+  user: UserSessionUser;
 };
 
 type AppliedDateFilter = {
@@ -37,6 +46,7 @@ type CreateRequestResponse = {
 };
 
 type ProductFilterField = 'price' | 'salesCount' | 'platform';
+type ProductStatusFilter = 'all' | ProductHistoryStatus;
 
 type PickerInput = HTMLInputElement & {
   showPicker?: () => void;
@@ -47,6 +57,14 @@ const productFilterOptions: Array<{ label: string; value: ProductFilterField }> 
   { label: '판매수량', value: 'salesCount' },
   { label: '플랫폼', value: 'platform' },
 ];
+
+const productStatusFilterOptions: Array<{ label: string; value: ProductStatusFilter }> = [
+  { label: '전체', value: 'all' },
+  { label: '미신청', value: '미신청' },
+  { label: '신고완료', value: '신고완료' },
+  { label: '차단완료', value: '차단완료' },
+];
+const paginationGroupSize = 10;
 
 function formatDateLabel(value: string) {
   const [year, month, day] = value.split('-');
@@ -159,16 +177,6 @@ function CheckboxMarkIcon() {
   );
 }
 
-function PaginationChevronIcon({ direction }: { direction: 'left' | 'right' }) {
-  const path = direction === 'left' ? 'M15 17L10 12L15 7' : 'M10 7L15 12L10 17';
-
-  return (
-    <svg className={styles.paginationIcon} width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d={path} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-    </svg>
-  );
-}
-
 export const getServerSideProps: GetServerSideProps<ProductHistoryListPageProps> = async ({ query, req, res }) => {
   const user = await getUserSessionUser(req, res);
 
@@ -181,25 +189,28 @@ export const getServerSideProps: GetServerSideProps<ProductHistoryListPageProps>
     };
   }
 
-  const product = getProductFromParam(query.product);
+  const products = await getScopedUserProductSummaries(user);
+  const product = getProductFromParam(query.product, products);
 
   return {
     props: {
       initialPage: normalizePage(query.page),
-      items: getProductHistoryItems(product),
+      items: await getProductHistoryItems(product, products),
       product,
+      productName: getProductLabel(product, products),
+      products,
+      user,
     },
   };
 };
 
-export default function ProductHistoryListPage({ initialPage, items, product }: ProductHistoryListPageProps) {
-  const [startDate, setStartDate] = useState('2026-04-02');
-  const [endDate, setEndDate] = useState('2026-04-02');
-  const [appliedDateFilter, setAppliedDateFilter] = useState<AppliedDateFilter>({
-    endDate: '2026-04-02',
-    startDate: '2026-04-02',
-  });
+export default function ProductHistoryListPage({ initialPage, items, product, productName, products, user }: ProductHistoryListPageProps) {
+  const initialDateRange = useMemo(() => getInitialSearchDateRange(items), [items]);
+  const [startDate, setStartDate] = useState(initialDateRange.startDate);
+  const [endDate, setEndDate] = useState(initialDateRange.endDate);
+  const [appliedDateFilter, setAppliedDateFilter] = useState<AppliedDateFilter>(initialDateRange);
   const [filterField, setFilterField] = useState<ProductFilterField>('price');
+  const [statusFilter, setStatusFilter] = useState<ProductStatusFilter>('all');
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [requestedById, setRequestedById] = useState<Record<string, boolean>>(() =>
     items.reduce(
@@ -213,14 +224,39 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
   const [requestingById, setRequestingById] = useState<Record<string, boolean>>({});
   const [requestError, setRequestError] = useState('');
 
-  const filteredItems = useMemo(
-    () => sortItemsByFilterField(filterProductHistoryItems(items, appliedDateFilter.startDate, appliedDateFilter.endDate), filterField),
-    [appliedDateFilter.endDate, appliedDateFilter.startDate, filterField, items]
-  );
+  useEffect(() => {
+    setStartDate(initialDateRange.startDate);
+    setEndDate(initialDateRange.endDate);
+    setAppliedDateFilter(initialDateRange);
+    setCurrentPage(initialPage);
+    setRequestedById(
+      items.reduce<Record<string, boolean>>(
+        (requests, item) => ({
+          ...requests,
+          [item.id]: item.blockRequested,
+        }),
+        {}
+      )
+    );
+    setRequestingById({});
+    setRequestError('');
+  }, [initialDateRange, initialPage, items, product]);
+
+  const filteredItems = useMemo(() => {
+    const dateFilteredItems = filterProductHistoryItems(items, appliedDateFilter.startDate, appliedDateFilter.endDate);
+    const statusFilteredItems =
+      statusFilter === 'all'
+        ? dateFilteredItems
+        : dateFilteredItems.filter((item) => getRowStatus(item, requestedById) === statusFilter);
+
+    return sortItemsByFilterField(statusFilteredItems, filterField);
+  }, [appliedDateFilter.endDate, appliedDateFilter.startDate, filterField, items, requestedById, statusFilter]);
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / productHistoryPageSize));
   const page = Math.min(currentPage, totalPages);
   const visibleItems = filteredItems.slice((page - 1) * productHistoryPageSize, page * productHistoryPageSize);
-  const pageNumbers = Array.from({ length: totalPages }).map((_, index) => index + 1);
+  const pageGroupStart = Math.floor((page - 1) / paginationGroupSize) * paginationGroupSize + 1;
+  const pageGroupEnd = Math.min(totalPages, pageGroupStart + paginationGroupSize - 1);
+  const pageNumbers = Array.from({ length: pageGroupEnd - pageGroupStart + 1 }).map((_, index) => pageGroupStart + index);
 
   const handleRefresh = () => {
     const normalizedDateRange = normalizeDateRange(startDate, endDate);
@@ -288,10 +324,10 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
   return (
     <>
       <Head>
-        <title>{product} 내역목록 | LIFANG INC.</title>
+        <title>{productName} 내역목록 | LIFANG INC.</title>
       </Head>
 
-      <UserLayout>
+      <UserLayout accountEmail={user.email} products={products}>
         <div className={styles.listPage}>
           <header className={styles.listHeader}>
             <h1 className={styles.pageTitle}>내역목록</h1>
@@ -318,17 +354,38 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
                 </span>
               </label>
 
+              <label className={styles.selectGroup}>
+                <span className={styles.filterLabel}>진행상황</span>
+                <span className={styles.selectBox}>
+                  <select
+                    className={styles.select}
+                    value={statusFilter}
+                    onChange={(event) => {
+                      setStatusFilter(event.target.value as ProductStatusFilter);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    {productStatusFilterOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDownIcon className={styles.selectIcon} />
+                </span>
+              </label>
+
               <span className={styles.filterLabel}>검색 날짜</span>
               <DateControl ariaLabel="검색 시작 날짜" value={startDate} onChange={setStartDate} />
               <span className={styles.tilde}>~</span>
               <DateControl ariaLabel="검색 종료 날짜" value={endDate} onChange={setEndDate} />
               <button className={styles.refreshButton} type="button" onClick={handleRefresh}>
-                새로고침
+                조회
               </button>
             </div>
           </header>
 
-          <section className={styles.historyTable} aria-label={`${product} 내역목록`}>
+          <section className={styles.historyTable} aria-label={`${productName} 내역목록`}>
             {requestError ? (
               <p className={styles.inlineError} role="alert">
                 {requestError}
@@ -351,7 +408,7 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
             </div>
 
             <div className={styles.tableRows}>
-              {visibleItems.map((item, index) => {
+              {visibleItems.length > 0 ? visibleItems.map((item, index) => {
                 const rowStatus = getRowStatus(item, requestedById);
                 const isRequested = requestedById[item.id] ?? item.blockRequested;
                 const isRequesting = requestingById[item.id] ?? false;
@@ -366,7 +423,11 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
                     </span>
                     <span className={styles.dateCell}>{item.displayDate}</span>
                     <span className={styles.imageCell}>
-                      <img className={styles.productThumbnail} src={item.imageUrl} alt={`${product} 침해 제품`} />
+                      {item.imageUrl ? (
+                        <img className={styles.productThumbnail} src={item.imageUrl} alt={`${productName} 침해 제품`} />
+                      ) : (
+                        '-'
+                      )}
                     </span>
                     <span className={styles.platformCell}>{item.platform}</span>
                     <span className={styles.productNameCell}>{item.productName}</span>
@@ -407,18 +468,26 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
                     </span>
                   </div>
                 );
-              })}
+              }) : <p className={styles.emptyState}>표시할 내역 데이터가 없습니다.</p>}
             </div>
           </section>
 
           <nav className={styles.pagination} aria-label="내역목록 페이지네이션">
             <button
               type="button"
+              onClick={() => setCurrentPage(1)}
+              disabled={page <= 1}
+              aria-label="첫 페이지"
+            >
+              <ChevronsLeft className={styles.paginationIcon} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
               onClick={() => setCurrentPage(Math.max(1, page - 1))}
               disabled={page <= 1}
               aria-label="이전 페이지"
             >
-              <PaginationChevronIcon direction="left" />
+              <ChevronLeft className={styles.paginationIcon} aria-hidden="true" />
             </button>
             {pageNumbers.map((pageNumber) => (
               <button
@@ -437,7 +506,15 @@ export default function ProductHistoryListPage({ initialPage, items, product }: 
               disabled={page >= totalPages}
               aria-label="다음 페이지"
             >
-              <PaginationChevronIcon direction="right" />
+              <ChevronRight className={styles.paginationIcon} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={page >= totalPages}
+              aria-label="마지막 페이지"
+            >
+              <ChevronsRight className={styles.paginationIcon} aria-hidden="true" />
             </button>
           </nav>
         </div>

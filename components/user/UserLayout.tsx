@@ -4,18 +4,21 @@ import { ReactNode } from 'react';
 
 import { Footer } from '@/components/Footer';
 import { BagIcon, HomeIcon } from '@/components/icons/AdminIcons';
-import { isUserProduct, userProducts } from '@/lib/user/products';
+import type { UserProductSummary } from '@/lib/user/productHistory';
 
 import styles from './UserLayout.module.css';
 
 type UserLayoutProps = {
+  accountEmail?: string;
+  accountName?: string;
   children: ReactNode;
+  products?: UserProductSummary[];
 };
 
-export function UserLayout({ children }: UserLayoutProps) {
+export function UserLayout({ accountEmail = '', accountName = '고객 계정', children, products = [] }: UserLayoutProps) {
   const router = useRouter();
   const queryProduct = typeof router.query.product === 'string' ? router.query.product : null;
-  const activeProduct = isUserProduct(queryProduct ?? undefined) ? queryProduct : null;
+  const activeProduct = queryProduct && products.some((product) => product.id === queryProduct) ? queryProduct : null;
   const isHistoryRoute = router.pathname.startsWith('/products');
 
   return (
@@ -23,8 +26,8 @@ export function UserLayout({ children }: UserLayoutProps) {
       <div className={styles.shell}>
         <aside className={styles.sidebar}>
           <div className={styles.account}>
-            <p className={styles.company}>주식회사 제로피</p>
-            <p className={styles.siteUrl}>http://zerofee.kr/zerofee</p>
+            <p className={styles.company}>{accountName}</p>
+            <p className={styles.siteUrl}>{accountEmail || '-'}</p>
           </div>
 
           <nav className={styles.nav} aria-label="사용자 메뉴">
@@ -37,19 +40,23 @@ export function UserLayout({ children }: UserLayoutProps) {
               내역목록
             </div>
             <div className={styles.productList} aria-label="상품 목록">
-              {userProducts.map((product) => (
-                <Link
-                  className={styles.productItem}
-                  data-active={isHistoryRoute && activeProduct === product}
-                  href={`/products/${encodeURIComponent(product)}`}
-                  key={product}
-                >
-                  <span className={styles.productLabel}>
-                    <span className={styles.productDot} aria-hidden="true" />
-                    <span>{product}</span>
-                  </span>
-                </Link>
-              ))}
+              {products.length > 0 ? (
+                products.map((product) => (
+                  <Link
+                    className={styles.productItem}
+                    data-active={isHistoryRoute && activeProduct === product.id}
+                    href={`/products/${encodeURIComponent(product.id)}`}
+                    key={product.id}
+                  >
+                    <span className={styles.productLabel}>
+                      <span className={styles.productDot} aria-hidden="true" />
+                      <span>{product.name}</span>
+                    </span>
+                  </Link>
+                ))
+              ) : (
+                <p className={styles.productEmpty}>업로드된 시트가 없습니다.</p>
+              )}
             </div>
           </nav>
         </aside>

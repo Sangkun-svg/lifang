@@ -168,6 +168,19 @@
   line-height: 21px;
 }
 
+.emptyState {
+  display: flex;
+  width: max(100%, 1560px);
+  min-height: 160px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
 .tableHeader,
 .tableRow {
   display: grid;
@@ -504,6 +517,18 @@
 
 .detailInfoRow dd {
   word-break: break-all;
+}
+
+.detailExternalLink {
+  color: #1084fe;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.detailExternalLink:hover,
+.detailExternalLink:focus {
+  color: #006bd6;
 }
 
 .detailStatus {

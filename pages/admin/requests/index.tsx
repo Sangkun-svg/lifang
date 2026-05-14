@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { demoAdminRequests, getAdminRequests } from '@/lib/admin/requests';
+import { getAdminRequests } from '@/lib/admin/requests';
 import { getSheetSummaries } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
 import type { AdminRequest } from '@/types/adminRequest';
@@ -64,7 +64,7 @@ export const getServerSideProps: GetServerSideProps<AdminRequestsPageProps> = as
 
     return {
       props: {
-        requests: requests.length > 0 ? requests : demoAdminRequests,
+        requests,
         sheetSummaries,
         user,
       },
@@ -74,7 +74,7 @@ export const getServerSideProps: GetServerSideProps<AdminRequestsPageProps> = as
 
     return {
       props: {
-        requests: demoAdminRequests,
+        requests: [],
         sheetSummaries: [],
         user,
       },

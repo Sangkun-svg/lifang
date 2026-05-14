@@ -20,6 +20,7 @@
 | UI-002 | P1 | 로그인 | 로그인 페이지 푸터를 확인한다 | 푸터는 항상 하단에 있고, 화면 폭 전체 배경을 채우며, 내용은 중앙 기준으로 정렬된다 |
 | UI-003 | P1 | 액션 버튼 | 로그인/업로드/저장/요청 액션 중 로딩 상태를 확인한다 | double-bounce 로더가 표시되고 중복 클릭이 방지된다 |
 | UI-004 | P2 | 전체 | 로딩/빈 상태/에러 상태가 필요한 화면을 확인한다 | 빈 데이터 또는 실패 상태에서 사용자용 메시지가 노출된다 |
+| UI-005 | P1 | 검색 날짜 필터 | 날짜 필터가 있는 화면을 최초 진입한다 | 시작일은 오늘 기준 1개월 전, 종료일은 오늘로 기본 설정된다 |
 
 ## 인증
 
@@ -67,6 +68,10 @@
 | ADMIN-MEMBER-FORM-008 | P1 | `/admin/members/new` | 드롭다운에서 시트를 선택한다 | 선택한 시트가 태그 형태로 표시되고, 같은 시트는 목록에서 제외된다 |
 | ADMIN-MEMBER-FORM-009 | P1 | `/admin/members/new` | 선택한 시트 삭제 아이콘을 클릭한다 | 시트 태그가 제거되고 다시 선택 가능해진다 |
 | ADMIN-MEMBER-FORM-010 | P2 | `/admin/members/[memberId]` | 수정 화면을 연다 | 기존 이메일/비밀번호는 수정 화면 상태에 맞게 표시되고 수정/삭제 버튼이 보인다 |
+| ADMIN-MEMBER-FORM-011 | P1 | `/api/admin/members` | 필수값과 시트를 선택한 뒤 계정 생성을 완료한다 | Supabase Auth 유저, 고객 DB, 고객 유저 DB가 생성되고 선택 시트/레코드가 해당 고객에게 매칭된다 |
+| ADMIN-MEMBER-FORM-012 | P1 | `/api/admin/members` | 이미 등록된 이메일로 계정 생성을 요청한다 | `409 EMAIL_ALREADY_EXISTS`와 사용자용 에러 메시지가 반환된다 |
+| ADMIN-MEMBER-FORM-013 | P1 | `/admin/members/[memberId]` | 업체명/담당자/시트를 수정하고 저장한다 | 수정 중 로더가 표시되고 저장 후 변경값이 유지된다 |
+| ADMIN-MEMBER-FORM-014 | P1 | `/api/admin/members/[memberId]` | 회원 수정 시 연결 시트를 변경한다 | 기존 시트 연결은 해제되고 새로 선택한 시트와 레코드가 해당 고객에게 매칭된다 |
 
 ## 관리자 최근 요청
 
@@ -94,6 +99,9 @@
 | ADMIN-SHEET-008 | P2 | `/admin/sheets` | 업로드된 시트 목록을 확인한다 | 시트명, 원본 파일, 데이터 수, 상세정보가 표시된다 |
 | ADMIN-SHEET-009 | P1 | `/admin/sheets/[sheetId]` | 시트 상세를 연다 | 유저 내역목록과 같은 테이블 UI로 시트 레코드가 표시된다 |
 | ADMIN-SHEET-010 | P1 | `/admin/sheets/[sheetId]` | 필터/검색 날짜를 변경하고 새로고침한다 | 선택한 조건에 맞게 시트 레코드가 정렬/필터링된다 |
+| ADMIN-SHEET-011 | P1 | `/admin/sheets` | 매칭되지 않은 시트의 삭제하기를 클릭한다 | 확인 후 시트와 시트 레코드가 hard delete되고 목록에서 사라진다 |
+| ADMIN-SHEET-012 | P1 | `/admin/sheets` | 고객에게 매칭된 시트의 삭제하기를 클릭한다 | 해당 고객명 또는 이메일이 포함된 팝업이 표시되고 삭제되지 않는다 |
+| ADMIN-SHEET-013 | P1 | `/api/admin/sheets/[sheetId]` | 고객에게 매칭된 시트를 DELETE로 직접 요청한다 | `409 SHEET_ASSIGNED_TO_CUSTOMER` 응답으로 삭제가 차단된다 |
 
 ## 유저 대시보드
 
@@ -144,10 +152,7 @@
 
 | ID | 우선순위 | 케이스 | 비고 |
 | --- | --- | --- | --- |
-| FUTURE-001 | P1 | 회원 생성 실제 저장 성공/중복 이메일 실패 | 회원 생성 API 구현 후 테스트 코드 작성 |
-| FUTURE-002 | P1 | 회원 수정 실제 저장 | 회원 수정 API 구현 후 테스트 코드 작성 |
-| FUTURE-003 | P1 | 회원 hard delete 및 연결 데이터 삭제 | 삭제 API/확인 모달 구현 후 테스트 코드 작성 |
-| FUTURE-004 | P1 | 최근 요청 상태 변경/삭제 | 상태 변경 API 구현 후 테스트 코드 작성 |
-| FUTURE-005 | P1 | 외부 API timeout/malformed response 처리 | 외부 API 연동 방식 확정 후 mock 전략 필요 |
-| FUTURE-006 | P2 | Supabase 실제 RLS/권한 회귀 테스트 | 운영 스키마/RLS 확정 후 별도 테스트 필요 |
-
+| FUTURE-001 | P1 | 회원 hard delete 및 연결 데이터 삭제 | 삭제 API/확인 모달 구현 후 테스트 코드 작성 |
+| FUTURE-002 | P1 | 최근 요청 삭제 | 삭제 API/확인 모달 구현 후 테스트 코드 작성 |
+| FUTURE-003 | P1 | 외부 API timeout/malformed response 처리 | 외부 API 연동 방식 확정 후 mock 전략 필요 |
+| FUTURE-004 | P2 | Supabase 실제 RLS/권한 회귀 테스트 | 운영 스키마/RLS 확정 후 별도 테스트 필요 |

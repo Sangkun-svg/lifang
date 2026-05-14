@@ -1,12 +1,13 @@
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { CalendarIcon, ChevronDownIcon } from '@/components/icons/AdminIcons';
 import { getSheetRecords, getSheetSummaries, getSheetSummaryById } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
+import { getInitialSearchDateRange } from '@/lib/date/defaultRange';
 import type { SheetRecord, SheetSummary } from '@/types/sheet';
 
 import styles from '@/pages/products/ProductHistory.module.css';
@@ -173,23 +174,21 @@ export const getServerSideProps: GetServerSideProps<AdminSheetDetailPageProps> =
 };
 
 export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }: AdminSheetDetailPageProps) {
-  const initialDateRange = useMemo(() => {
-    const dates = records.map((record) => record.searchDate).filter(Boolean).sort();
-    const fallbackDate = '2026-04-02';
-
-    return {
-      endDate: dates[dates.length - 1] ?? fallbackDate,
-      startDate: dates[0] ?? fallbackDate,
-    };
-  }, [records]);
+  const initialDateRange = useMemo(() => getInitialSearchDateRange(records), [records]);
   const [startDate, setStartDate] = useState(initialDateRange.startDate);
   const [endDate, setEndDate] = useState(initialDateRange.endDate);
   const [appliedDateFilter, setAppliedDateFilter] = useState<AppliedDateFilter>(initialDateRange);
   const [filterField, setFilterField] = useState<SheetFilterField>('price');
 
+  useEffect(() => {
+    setStartDate(initialDateRange.startDate);
+    setEndDate(initialDateRange.endDate);
+    setAppliedDateFilter(initialDateRange);
+  }, [initialDateRange, sheet.id]);
+
   const visibleRecords = useMemo(() => {
     const filteredRecords = records.filter(
-      (record) => record.searchDate >= appliedDateFilter.startDate && record.searchDate <= appliedDateFilter.endDate
+      (record) => !record.searchDate || (record.searchDate >= appliedDateFilter.startDate && record.searchDate <= appliedDateFilter.endDate)
     );
 
     return sortRecords(filteredRecords, filterField);
@@ -291,7 +290,7 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
                   </span>
                   <span className={styles.requestCell}>-</span>
                   <span className={styles.detailCell}>
-                    <Link className={styles.tableLink} href={record.salesUrl || `/admin/sheets/${sheet.id}`}>
+                    <Link className={styles.tableLink} href={`/admin/sheets/${sheet.id}/records/${record.id}`}>
                       보기
                     </Link>
                   </span>

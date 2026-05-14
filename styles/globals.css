@@ -40,3 +40,31 @@ button,
 input {
   font-family: inherit;
 }
+
+.lifang-year-picker {
+  --adp-color: #24282c;
+  --adp-color-current-date: #ff2b3a;
+  --adp-color-selected: #ffffff;
+  --adp-background-color-selected-other-month: #ff2b3a;
+  --adp-background-color-hover: #f0f2f4;
+  --adp-background-color-selected: #ff2b3a;
+  --adp-border-color: #f0f2f4;
+  --adp-border-radius: 16px;
+  --adp-cell-border-radius: 12px;
+  width: 280px;
+  font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+.lifang-year-picker .air-datepicker-body--cells.-years- {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.lifang-year-picker .air-datepicker--pointer {
+  display: none;
+}
+
+.lifang-year-picker .air-datepicker-cell.-year- {
+  height: 42px;
+  font-size: 14px;
+  font-weight: 600;
+}

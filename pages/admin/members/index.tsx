@@ -5,9 +5,10 @@ import { useMemo, useRef, useState } from 'react';
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { CalendarIcon, PlusIcon, SearchIcon } from '@/components/icons/AdminIcons';
-import { adminMembers } from '@/lib/admin/members';
+import { getAdminMembers } from '@/lib/admin/members';
 import { getSheetSummaries } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
+import { getInitialSearchDateRange } from '@/lib/date/defaultRange';
 import type { Member } from '@/types/member';
 import type { SheetSummary } from '@/types/sheet';
 
@@ -90,19 +91,21 @@ export const getServerSideProps: GetServerSideProps<AdminMembersPageProps> = asy
   }
 
   try {
+    const [members, sheetSummaries] = await Promise.all([getAdminMembers(), getSheetSummaries()]);
+
     return {
       props: {
-        members: adminMembers,
-        sheetSummaries: await getSheetSummaries(),
+        members,
+        sheetSummaries,
         user,
       },
     };
   } catch (error) {
-    console.error('Load member page sheet summaries failed', error);
+    console.error('Load member page data failed', error);
 
     return {
       props: {
-        members: adminMembers,
+        members: [],
         sheetSummaries: [],
         user,
       },
@@ -111,9 +114,13 @@ export const getServerSideProps: GetServerSideProps<AdminMembersPageProps> = asy
 };
 
 export default function AdminMembersPage({ members, sheetSummaries }: AdminMembersPageProps) {
+  const defaultDateRange = useMemo(
+    () => getInitialSearchDateRange(members.map((member) => ({ searchDate: member.createdAtDate }))),
+    [members]
+  );
   const [keyword, setKeyword] = useState('');
-  const [startDate, setStartDate] = useState('2026-04-02');
-  const [endDate, setEndDate] = useState('2026-04-02');
+  const [startDate, setStartDate] = useState(defaultDateRange.startDate);
+  const [endDate, setEndDate] = useState(defaultDateRange.endDate);
 
   const visibleMembers = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -176,21 +183,25 @@ export default function AdminMembersPage({ members, sheetSummaries }: AdminMembe
           </div>
 
           <div className={styles.rows}>
-            {visibleMembers.map((member) => (
-              <div className={styles.tableRow} key={member.id}>
-                <span className={styles.dateCell}>{member.createdAt}</span>
-                <span className={styles.companyCell}>{member.companyName}</span>
-                <span className={styles.managerCell}>{member.managerName}</span>
-                <span className={styles.emailCell}>{member.email}</span>
-                <span className={styles.sheetCell}>
-                  <span className={styles.sheetUrl}>{member.sheetNames[0] ?? '-'}</span>
-                  {member.sheetNames.length > 1 ? <span className={styles.sheetCount}>외{member.sheetNames.length - 1}</span> : null}
-                </span>
-                <Link className={styles.actionCell} href={`/admin/members/${member.id}`}>
-                  보기
-                </Link>
-              </div>
-            ))}
+            {visibleMembers.length > 0 ? (
+              visibleMembers.map((member) => (
+                <div className={styles.tableRow} key={member.id}>
+                  <span className={styles.dateCell}>{member.createdAt || '-'}</span>
+                  <span className={styles.companyCell}>{member.companyName || '-'}</span>
+                  <span className={styles.managerCell}>{member.managerName || '-'}</span>
+                  <span className={styles.emailCell}>{member.email || '-'}</span>
+                  <span className={styles.sheetCell}>
+                    <span className={styles.sheetUrl}>{member.sheetNames[0] ?? '-'}</span>
+                    {member.sheetNames.length > 1 ? <span className={styles.sheetCount}>외{member.sheetNames.length - 1}</span> : null}
+                  </span>
+                  <Link className={styles.actionCell} href={`/admin/members/${member.id}`}>
+                    보기
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <p className={styles.emptyState}>등록된 회원 데이터가 없습니다.</p>
+            )}
           </div>
         </section>
       </AdminLayout>

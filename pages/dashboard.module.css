@@ -62,10 +62,6 @@
   cursor: pointer;
 }
 
-.yearBox {
-  padding: 0 16px;
-}
-
 .dateTrigger {
   display: flex;
   width: 100%;
@@ -103,8 +99,7 @@
   pointer-events: none;
 }
 
-.nativeDateInput,
-.nativeYearSelect {
+.nativeDateInput {
   position: absolute;
   top: 50%;
   right: 16px;
@@ -116,13 +111,14 @@
   transform: translateY(-50%);
 }
 
-.nativeYearSelect {
+.nativeYearInput {
+  position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  cursor: pointer;
-  pointer-events: auto;
-  transform: none;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .tilde {
@@ -221,6 +217,14 @@
   letter-spacing: 0;
 }
 
+.emptyState {
+  margin: 16px;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
 .platformCard {
   display: flex;
   width: 100%;
@@ -266,7 +270,7 @@
 
 .donutArea {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 20px;
 }
 
@@ -275,31 +279,72 @@
   width: clamp(180px, 18vw, 360px);
   height: clamp(180px, 18vw, 360px);
   flex: 0 0 auto;
-  border-radius: 50%;
-  background: conic-gradient(#ff932e 0deg 90deg, #ff2b3a 90deg 284deg, #1084fe 284deg 360deg);
 }
 
-.donutChart::after {
-  position: absolute;
-  inset: 24.7%;
-  border-radius: 50%;
-  background: #ffffff;
-  content: "";
+.donutSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
-.donutCenterText {
+.donutTrack,
+.donutSegment {
+  fill: none;
+  stroke-width: 48px;
+}
+
+.donutTrack {
+  stroke: #f0f2f4;
+}
+
+.donutSegment {
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.donutSegment:hover,
+.donutSegment:focus {
+  opacity: 0.78;
+  outline: none;
+}
+
+.chartTooltip {
   position: absolute;
-  inset: 24.7%;
-  z-index: 1;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 10;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #4f5459;
+  min-width: 116px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 8px 16px;
+  border-radius: 16px;
+  box-shadow: 0 8px 10px rgb(0 0 0 / 20%);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.donutChart .chartTooltip {
+  top: 0;
+  bottom: auto;
+}
+
+.chartTooltip span {
+  color: #fefefe;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+
+.chartTooltip strong {
+  color: #fefefe;
   font-size: 14px;
   font-weight: 700;
   line-height: 21px;
-  letter-spacing: -0.21px;
-  text-align: center;
+  letter-spacing: 0;
 }
 
 .legend {
@@ -311,7 +356,7 @@
 
 .legendItem {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) 30px 42px;
+  grid-template-columns: 10px minmax(0, 1fr) 42px;
   align-items: center;
   column-gap: 6px;
   color: #4f5459;
@@ -336,12 +381,6 @@
   overflow: hidden;
   color: #4f5459;
   text-overflow: ellipsis;
-}
-
-.legendPercent {
-  color: #1084fe;
-  font-weight: 700;
-  text-align: right;
 }
 
 .legendCount {
@@ -387,6 +426,15 @@
 
 .rankRow {
   background: #ffffff;
+}
+
+.rankHeader span,
+.rankRow span {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .monthlyCard {
@@ -519,6 +567,19 @@
   overflow: visible;
 }
 
+.counterfeitBar .chartTooltip,
+.blockedBar .chartTooltip {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.counterfeitBar:hover .chartTooltip,
+.counterfeitBar:focus .chartTooltip,
+.blockedBar:hover .chartTooltip,
+.blockedBar:focus .chartTooltip {
+  opacity: 1;
+}
+
 .counterfeitBar {
   background: #ff932e;
 }
@@ -535,37 +596,4 @@
   line-height: 18px;
   letter-spacing: 0;
   text-align: center;
-}
-
-.counterfeitCallout,
-.blockedCallout {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 1;
-  padding: 2px 6px;
-  border: 1px solid #f0f2f4;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #ff932e;
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 12px;
-  letter-spacing: 0;
-  text-align: center;
-  white-space: nowrap;
-  transform: translateX(-50%);
-}
-
-.counterfeitCallout {
-  color: #ff932e;
-}
-
-.blockedCallout {
-  color: #ff2b3a;
-}
-
-.counterfeitCallout::first-line,
-.blockedCallout::first-line {
-  font-weight: 500;
 }

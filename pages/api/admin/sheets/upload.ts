@@ -5,6 +5,7 @@ import { sendFailure, sendSuccess } from '@/lib/api/responses';
 import { createSheetUpload } from '@/lib/admin/sheets';
 import { parseSheetRecords } from '@/lib/admin/sheetParser';
 import { getAdminSessionUser } from '@/lib/auth/admin';
+import { notifyServerError } from '@/lib/notifications/slack';
 import type { SheetSummary } from '@/types/sheet';
 
 export const config = {
@@ -28,12 +29,42 @@ type MultipartForm = {
   file: UploadedFile | null;
 };
 
+function stripHeaderQuotes(value: string) {
+  return value.trim().replace(/^"|"$/g, '');
+}
+
+function decodeHeaderFileName(value: string) {
+  const strippedValue = stripHeaderQuotes(value);
+
+  try {
+    return decodeURIComponent(strippedValue);
+  } catch {
+    return Buffer.from(strippedValue, 'latin1').toString('utf8');
+  }
+}
+
+function decodeExtendedHeaderFileName(value: string) {
+  const strippedValue = stripHeaderQuotes(value);
+  const encodedValue = strippedValue.toLowerCase().startsWith("utf-8''") ? strippedValue.slice(7) : strippedValue;
+
+  try {
+    return decodeURIComponent(encodedValue);
+  } catch {
+    return decodeHeaderFileName(encodedValue);
+  }
+}
+
 function parseContentDisposition(value: string) {
   const nameMatch = /name="([^"]+)"/.exec(value);
+  const extendedFileNameMatch = /filename\*=([^;]+)/i.exec(value);
   const fileNameMatch = /filename="([^"]*)"/.exec(value);
 
   return {
-    fileName: fileNameMatch?.[1] ?? null,
+    fileName: extendedFileNameMatch?.[1]
+      ? decodeExtendedHeaderFileName(extendedFileNameMatch[1])
+      : fileNameMatch?.[1]
+        ? decodeHeaderFileName(fileNameMatch[1])
+        : null,
     name: nameMatch?.[1] ?? null,
   };
 }
@@ -104,6 +135,24 @@ async function readRequestBuffer(req: NextApiRequest) {
   return Buffer.concat(chunks);
 }
 
+function getUploadFailure(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+
+  if (message === 'SHEET_NAME_ALREADY_EXISTS') {
+    return {
+      code: 'SHEET_NAME_ALREADY_EXISTS',
+      message: '이미 사용 중인 시트명입니다.',
+      status: 409,
+    };
+  }
+
+  return {
+    code: 'SHEET_UPLOAD_FAILED',
+    message: '시트 데이터를 저장할 수 없습니다.',
+    status: 500,
+  };
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse<UploadData>>) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -122,6 +171,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return sendFailure(res, 400, 'INVALID_CONTENT_TYPE', '엑셀 파일을 multipart/form-data로 업로드해주세요.');
   }
 
+  let fileName = '';
+  let recordCount = 0;
+  let sheetName = '';
+
   try {
     const form = parseMultipartForm(await readRequestBuffer(req), contentType);
 
@@ -129,13 +182,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       return sendFailure(res, 400, 'FILE_REQUIRED', '업로드할 엑셀 파일을 선택해주세요.');
     }
 
+    fileName = form.file.fileName;
     const records = parseSheetRecords(form.file.buffer);
+    recordCount = records.length;
 
     if (records.length === 0) {
       return sendFailure(res, 400, 'EMPTY_SHEET', '저장할 수 있는 시트 데이터가 없습니다.');
     }
 
-    const sheetName = form.fields.get('sheetName') || form.file.fileName.replace(/\.[^.]+$/, '') || '업로드 시트';
+    sheetName = form.fields.get('sheetName') || form.file.fileName.replace(/\.[^.]+$/, '') || '업로드 시트';
     const sheet = await createSheetUpload({
       name: sheetName,
       originalFileName: form.file.fileName,
@@ -148,6 +203,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     });
   } catch (error) {
     console.error('Admin sheet upload failed', error);
-    return sendFailure(res, 500, 'SHEET_UPLOAD_FAILED', '시트 데이터를 저장할 수 없습니다.');
+    await notifyServerError({
+      context: {
+        adminEmail: user.email,
+        fileName,
+        recordCount,
+        route: 'POST /api/admin/sheets/upload',
+        sheetName,
+      },
+      error,
+      title: 'Admin sheet upload failed',
+    });
+    const failure = getUploadFailure(error);
+
+    return sendFailure(res, failure.status, failure.code, failure.message);
   }
 }

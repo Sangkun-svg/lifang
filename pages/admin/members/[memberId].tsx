@@ -3,7 +3,7 @@ import Head from 'next/head';
 
 import { Footer } from '@/components/Footer';
 import { MemberAccountForm } from '@/components/members/MemberAccountForm';
-import { findAdminMember } from '@/lib/admin/members';
+import { getAdminMemberById } from '@/lib/admin/members';
 import { getSheetSummaries } from '@/lib/admin/sheets';
 import { getAdminSessionUser } from '@/lib/auth/admin';
 import type { Member } from '@/types/member';
@@ -31,19 +31,30 @@ export const getServerSideProps: GetServerSideProps<MemberDetailPageProps> = asy
   const memberId = typeof params?.memberId === 'string' ? params.memberId : '';
 
   try {
-    return {
-      props: {
-        member: findAdminMember(memberId),
-        sheetSummaries: await getSheetSummaries(),
-      },
-    };
-  } catch (error) {
-    console.error('Load member detail sheet summaries failed', error);
+    const [member, sheetSummaries] = await Promise.all([getAdminMemberById(memberId), getSheetSummaries()]);
+
+    if (!member) {
+      return {
+        redirect: {
+          destination: '/admin/members',
+          permanent: false,
+        },
+      };
+    }
 
     return {
       props: {
-        member: findAdminMember(memberId),
-        sheetSummaries: [],
+        member,
+        sheetSummaries,
+      },
+    };
+  } catch (error) {
+    console.error('Load member detail failed', error);
+
+    return {
+      redirect: {
+        destination: '/admin/members',
+        permanent: false,
       },
     };
   }

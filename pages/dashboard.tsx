@@ -1,17 +1,37 @@
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import AirDatepicker from 'air-datepicker';
+import localeKo from 'air-datepicker/locale/ko';
 
-import { CalendarIcon, ChevronDownIcon, PackageCheckIcon, PackageMinusIcon, PackagePlusIcon, SearchIcon } from '@/components/icons/AdminIcons';
+import {
+  CalendarIcon,
+  ChevronDownIcon,
+  PackageCheckIcon,
+  PackageMinusIcon,
+  PackagePlusIcon,
+  SearchIcon,
+} from '@/components/icons/AdminIcons';
 import { UserLayout } from '@/components/user/UserLayout';
 import { getUserSessionUser, type UserSessionUser } from '@/lib/auth/user';
-import { isUserProduct, userProducts, type UserProduct } from '@/lib/user/products';
+import {
+  getProductFromParam,
+  getProductHistoryItems,
+  getProductLabel,
+  getScopedUserProductSummaries,
+  type ProductHistoryItem,
+  type UserProduct,
+  type UserProductSummary,
+} from '@/lib/user/productHistory';
+import { getInitialSearchMonthRange } from '@/lib/date/defaultRange';
 
 import styles from './dashboard.module.css';
 
 type DashboardPageProps = {
   initialProduct: UserProduct;
+  items: ProductHistoryItem[];
+  products: UserProductSummary[];
   user: UserSessionUser;
 };
 
@@ -25,6 +45,8 @@ type PlatformDatum = {
   name: string;
   count: number;
   color: string;
+  percent: number;
+  percentLabel: string;
 };
 
 type ShopRank = {
@@ -40,99 +62,15 @@ type MonthlyDatum = {
   blocked: number;
 };
 
-type ProductMonthRecord = {
-  blockCompleted: number;
-  blockRequested: number;
-  confirmed: number;
-  platforms: PlatformDatum[];
-  searchCount: number;
-  year: string;
-  yearMonth: string;
-};
-
 type AppliedFilters = {
   endMonth: string;
   product: UserProduct;
   startMonth: string;
 };
 
-const defaultStartMonth = '2025-07';
-const defaultEndMonth = '2026-04';
-const platformNames = ['타오바오', '알리익스프레스', '핀둬둬', '1688', '징동 닷컴', '티몰', '쇼피', '라자다', '이베이', '기타'];
 const platformColors = ['#ff2b3a', '#1084fe', '#ff932e', '#ffb15a', '#ffbe75', '#ffca8d', '#ffd4a4', '#ffdfbd', '#ffe8d3', '#4f5459'];
-
-const baseMonthlyData: MonthlyDatum[] = [
-  { month: '01', counterfeit: 264, blocked: 138 },
-  { month: '02', counterfeit: 324, blocked: 138 },
-  { month: '03', counterfeit: 217, blocked: 34 },
-  { month: '04', counterfeit: 178, blocked: 82 },
-  { month: '05', counterfeit: 51, blocked: 34 },
-  { month: '06', counterfeit: 117, blocked: 83 },
-  { month: '07', counterfeit: 83, blocked: 34 },
-  { month: '08', counterfeit: 279, blocked: 128 },
-  { month: '09', counterfeit: 117, blocked: 229 },
-  { month: '10', counterfeit: 39, blocked: 8 },
-  { month: '11', counterfeit: 88, blocked: 34 },
-  { month: '12', counterfeit: 117, blocked: 34 },
-];
-
-const productScales: Record<UserProduct, number> = {
-  공룡: 1,
-  산타: 0.72,
-  토끼: 1.18,
-  공룡2: 0.86,
-  호랑이: 1.34,
-};
-
-const productPlatformBias: Record<UserProduct, number[]> = {
-  공룡: [38, 30, 24, 16, 12, 10, 8, 7, 5, 4],
-  산타: [24, 36, 20, 18, 10, 9, 8, 8, 6, 5],
-  토끼: [28, 18, 40, 16, 12, 10, 9, 7, 6, 4],
-  공룡2: [34, 22, 24, 26, 14, 9, 8, 6, 5, 4],
-  호랑이: [22, 18, 26, 14, 30, 10, 9, 8, 7, 5],
-};
-
-function createProductRecords(product: UserProduct): ProductMonthRecord[] {
-  const scale = productScales[product];
-  const bias = productPlatformBias[product];
-
-  return [2025, 2026].flatMap((year) => {
-    const yearScale = year === 2026 ? 0.78 : 1;
-
-    return baseMonthlyData.map((datum, index) => {
-      const monthNumber = index + 1;
-      const seasonalOffset = (monthNumber % 4) * 9;
-      const confirmed = Math.max(0, Math.round((datum.counterfeit + seasonalOffset) * scale * yearScale));
-      const blockCompleted = Math.max(0, Math.round((datum.blocked + seasonalOffset / 2) * scale * yearScale));
-      const blockRequested = Math.max(blockCompleted, Math.round(blockCompleted + confirmed * 0.22));
-      const searchCount = Math.round(confirmed + blockRequested + (monthNumber + 6) * 8 * scale);
-      const platformTotal = bias.reduce((sum, value) => sum + value, 0);
-      const platforms = bias.map((value, platformIndex) => ({
-        color: platformColors[platformIndex],
-        count: Math.round((confirmed * value) / platformTotal),
-        name: platformNames[platformIndex],
-      }));
-
-      return {
-        blockCompleted,
-        blockRequested,
-        confirmed,
-        platforms,
-        searchCount,
-        year: String(year),
-        yearMonth: `${year}-${String(monthNumber).padStart(2, '0')}`,
-      };
-    });
-  });
-}
-
-const productRecords = userProducts.reduce(
-  (records, product) => ({
-    ...records,
-    [product]: createProductRecords(product),
-  }),
-  {} as Record<UserProduct, ProductMonthRecord[]>
-);
+const maxPlatformChartItems = 10;
+const months = Array.from({ length: 12 }).map((_, index) => String(index + 1).padStart(2, '0'));
 
 function formatDateLabel(value: string) {
   const [year, month] = value.split('-');
@@ -152,14 +90,30 @@ function normalizeMonthRange(startMonth: string, endMonth: string) {
   return { startMonth: endMonth, endMonth: startMonth };
 }
 
-function sumPlatforms(records: ProductMonthRecord[]): PlatformDatum[] {
-  return platformNames
-    .map((name, index) => ({
-      color: platformColors[index],
-      count: records.reduce((sum, record) => sum + (record.platforms[index]?.count ?? 0), 0),
+function getSearchMonth(item: ProductHistoryItem) {
+  return item.searchDate ? item.searchDate.slice(0, 7) : '';
+}
+
+function getPlatformData(items: ProductHistoryItem[]): PlatformDatum[] {
+  const counts = items.reduce<Record<string, number>>((platformCounts, item) => {
+    const platform = item.platform || '기타';
+
+    return {
+      ...platformCounts,
+      [platform]: (platformCounts[platform] ?? 0) + 1,
+    };
+  }, {});
+
+  return Object.entries(counts)
+    .sort((first, second) => second[1] - first[1])
+    .slice(0, maxPlatformChartItems)
+    .map(([name, count], index) => ({
+      color: platformColors[index % platformColors.length],
+      count,
       name,
-    }))
-    .sort((first, second) => second.count - first.count);
+      percent: 0,
+      percentLabel: '0%',
+    }));
 }
 
 function buildConicGradient(platforms: PlatformDatum[]) {
@@ -180,65 +134,74 @@ function buildConicGradient(platforms: PlatformDatum[]) {
   return `conic-gradient(${segments.join(', ')})`;
 }
 
-function buildShopRanks(product: UserProduct, platforms: PlatformDatum[], totalSearchCount: number): ShopRank[] {
-  const prefix = product.slice(0, 1);
-  const factors = [0.52, 0.49, 0.46, 0.4, 0.34, 0.24, 0.17, 0.11, 0.07, 0.04];
-
-  return factors.map((factor, index) => {
-    const platform = platforms[index % platforms.length] ?? platforms[0];
+function buildShopRanks(items: ProductHistoryItem[]): ShopRank[] {
+  const counts = items.reduce<Record<string, { count: number; platform: string; shop: string }>>((shopCounts, item) => {
+    const shop = item.companyName || '-';
+    const key = `${shop}:${item.platform}`;
+    const previous = shopCounts[key];
 
     return {
-      count: `${Math.max(0, Math.round(totalSearchCount * factor)).toLocaleString('ko-KR')}개`,
-      platform: platform?.name ?? '-',
-      rank: `${index + 1}위`,
-      shop: `${prefix}${String.fromCharCode(65 + index)}샵`,
+      ...shopCounts,
+      [key]: {
+        count: (previous?.count ?? 0) + Math.max(item.salesCount, 1),
+        platform: item.platform || '-',
+        shop,
+      },
     };
-  });
+  }, {});
+
+  return Object.values(counts)
+    .sort((first, second) => second.count - first.count)
+    .slice(0, 10)
+    .map((shop, index) => ({
+      count: `${shop.count.toLocaleString('ko-KR')}개`,
+      platform: shop.platform,
+      rank: `${index + 1}위`,
+      shop: shop.shop,
+    }));
 }
 
-function getDashboardData(filters: AppliedFilters, selectedYear: string) {
-  const records = productRecords[filters.product];
-  const rangeRecords = records.filter((record) => record.yearMonth >= filters.startMonth && record.yearMonth <= filters.endMonth);
-  const platformData = sumPlatforms(rangeRecords);
+function getDashboardData(items: ProductHistoryItem[], filters: AppliedFilters, selectedYear: string) {
+  const rangeItems = items.filter((item) => {
+    const searchMonth = getSearchMonth(item);
+
+    return searchMonth >= filters.startMonth && searchMonth <= filters.endMonth;
+  });
+  const platformData = getPlatformData(rangeItems);
   const totalPlatformCount = platformData.reduce((sum, platform) => sum + platform.count, 0);
-  const totalSearchCount = rangeRecords.reduce((sum, record) => sum + record.searchCount, 0);
-  const confirmedCount = rangeRecords.reduce((sum, record) => sum + record.confirmed, 0);
-  const blockRequestedCount = rangeRecords.reduce((sum, record) => sum + record.blockRequested, 0);
-  const blockCompletedCount = rangeRecords.reduce((sum, record) => sum + record.blockCompleted, 0);
+  const platformDataWithPercent = platformData.map((platform) => {
+    const percent = totalPlatformCount > 0 ? Math.round((platform.count / totalPlatformCount) * 100) : 0;
+
+    return {
+      ...platform,
+      percent,
+      percentLabel: `${percent}%`,
+    };
+  });
+  const blockRequestedCount = rangeItems.filter((item) => item.blockRequested).length;
+  const blockCompletedCount = rangeItems.filter((item) => item.status === '차단완료').length;
 
   return {
-    donutGradient: buildConicGradient(platformData),
-    monthlyData: baseMonthlyData.map((datum) => {
-      const yearMonth = `${selectedYear}-${datum.month}`;
-      const matchingRecord = records.find((record) => record.yearMonth === yearMonth);
-      const isInRange = yearMonth >= filters.startMonth && yearMonth <= filters.endMonth;
+    donutGradient: buildConicGradient(platformDataWithPercent),
+    monthlyData: months.map((month) => {
+      const yearMonth = `${selectedYear}-${month}`;
+      const monthItems = rangeItems.filter((item) => getSearchMonth(item) === yearMonth);
 
       return {
-        blocked: matchingRecord && isInRange ? matchingRecord.blockCompleted : 0,
-        counterfeit: matchingRecord && isInRange ? matchingRecord.confirmed : 0,
-        month: datum.month,
+        blocked: monthItems.filter((item) => item.status === '차단완료').length,
+        counterfeit: monthItems.length,
+        month,
       };
     }),
-    platformPercentByName: Object.fromEntries(
-      platformData.map((platform) => [
-        platform.name,
-        totalPlatformCount > 0 ? `${Math.round((platform.count / totalPlatformCount) * 100)}%` : '0%',
-      ])
-    ) as Record<string, string>,
-    platformData,
-    shopRanks: buildShopRanks(filters.product, platformData, totalSearchCount),
+    platformData: platformDataWithPercent,
+    shopRanks: buildShopRanks(rangeItems),
     stats: [
-      { label: '총 검색 수', value: totalSearchCount, icon: 'search' },
-      { label: '확정된 위조품 수', value: confirmedCount, icon: 'check' },
+      { label: '총 검색 수', value: rangeItems.length, icon: 'search' },
+      { label: '확정된 위조품 수', value: rangeItems.length, icon: 'check' },
       { label: '차단 신청한 위조품 수', value: blockRequestedCount, icon: 'plus' },
       { label: '차단 완료된 위조품 수', value: blockCompletedCount, icon: 'minus' },
     ] satisfies StatCard[],
   };
-}
-
-function getProductFromQuery(product: string | string[] | undefined): UserProduct {
-  const value = Array.isArray(product) ? product[0] : product;
-  return isUserProduct(value) ? value : userProducts[0];
 }
 
 function StatIcon({ icon }: { icon: StatCard['icon'] }) {
@@ -255,6 +218,51 @@ function StatIcon({ icon }: { icon: StatCard['icon'] }) {
   }
 
   return <PackageMinusIcon className={styles.statIcon} />;
+}
+
+function PlatformDonutChart({ platforms }: { platforms: PlatformDatum[] }) {
+  const [hoveredPlatform, setHoveredPlatform] = useState<PlatformDatum | null>(null);
+  const radius = 76;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className={styles.donutChart} aria-label="플랫폼 별 비율 차트">
+      <svg className={styles.donutSvg} viewBox="0 0 200 200" role="img">
+        <circle className={styles.donutTrack} cx="100" cy="100" r={radius} />
+        {platforms.map((platform) => {
+          const segmentLength = (platform.percent / 100) * circumference;
+          const segmentOffset = offset;
+          offset += segmentLength;
+
+          return (
+            <circle
+              className={styles.donutSegment}
+              cx="100"
+              cy="100"
+              key={platform.name}
+              r={radius}
+              stroke={platform.color}
+              strokeDasharray={`${segmentLength} ${circumference}`}
+              strokeDashoffset={-segmentOffset}
+              transform="rotate(-90 100 100)"
+              onMouseEnter={() => setHoveredPlatform(platform)}
+              onMouseLeave={() => setHoveredPlatform(null)}
+              onFocus={() => setHoveredPlatform(platform)}
+              onBlur={() => setHoveredPlatform(null)}
+              tabIndex={0}
+            />
+          );
+        })}
+      </svg>
+      {hoveredPlatform ? (
+        <span className={styles.chartTooltip} style={{ backgroundColor: hoveredPlatform.color }} role="status">
+          <span>{hoveredPlatform.name}</span>
+          <strong>{hoveredPlatform.percentLabel}</strong>
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 type PickerInput = HTMLInputElement & {
@@ -305,6 +313,101 @@ function DateControl({ ariaLabel, value, onChange }: DateControlProps) {
   );
 }
 
+function YearControl({ ariaLabel, value, onChange }: DateControlProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<AirDatepicker<HTMLInputElement> | null>(null);
+
+  const openPicker = () => {
+    pickerRef.current?.show();
+  };
+
+  useEffect(() => {
+    const input = inputRef.current;
+
+    if (!input) {
+      return;
+    }
+
+    const selectedDate = new Date(Number(value), 0, 1);
+    const datepicker = new AirDatepicker(input, {
+      autoClose: true,
+      classes: 'lifang-year-picker',
+      dateFormat: 'yyyy',
+      locale: localeKo,
+      minView: 'years',
+      navTitles: {
+        years: 'yyyy1 - yyyy2',
+      },
+      offset: 8,
+      onSelect: ({ date }) => {
+        const selectedDateValue = Array.isArray(date) ? date[0] : date;
+
+        if (selectedDateValue) {
+          onChange(String(selectedDateValue.getFullYear()));
+        }
+      },
+      container: document.body,
+      position: ({ $datepicker, $target }) => {
+        const viewportGap = 16;
+        const targetRect = $target.getBoundingClientRect();
+        const pickerWidth = $datepicker.offsetWidth || 280;
+        const pickerHeight = $datepicker.offsetHeight || 0;
+        const left = Math.max(
+          viewportGap,
+          Math.min(targetRect.right - pickerWidth, window.innerWidth - pickerWidth - viewportGap)
+        );
+        const hasBottomSpace = targetRect.bottom + pickerHeight + viewportGap <= window.innerHeight;
+        const top = hasBottomSpace
+          ? targetRect.bottom + 8
+          : Math.max(viewportGap, targetRect.top - pickerHeight - 8);
+
+        $datepicker.style.left = `${left + window.scrollX}px`;
+        $datepicker.style.top = `${top + window.scrollY}px`;
+      },
+      selectedDates: [selectedDate],
+      startDate: selectedDate,
+      view: 'years',
+    });
+
+    pickerRef.current = datepicker;
+
+    return () => {
+      datepicker.destroy();
+      pickerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const nextDate = new Date(Number(value), 0, 1);
+
+    if (pickerRef.current && !Number.isNaN(nextDate.getTime())) {
+      pickerRef.current.update({
+        selectedDates: [nextDate],
+        startDate: nextDate,
+        view: 'years',
+      }, { silent: true });
+    }
+  }, [value]);
+
+  return (
+    <span className={styles.yearBox}>
+      <button className={styles.dateTrigger} type="button" onClick={openPicker} aria-label={ariaLabel}>
+        <span>{value}</span>
+        <CalendarIcon className={styles.controlIcon} />
+      </button>
+      <input
+        ref={inputRef}
+        className={styles.nativeYearInput}
+        type="text"
+        value={value}
+        readOnly
+        aria-label={ariaLabel}
+        tabIndex={-1}
+      />
+    </span>
+  );
+}
+
 export const getServerSideProps: GetServerSideProps<DashboardPageProps> = async ({ query, req, res }) => {
   const user = await getUserSessionUser(req, res);
 
@@ -317,54 +420,87 @@ export const getServerSideProps: GetServerSideProps<DashboardPageProps> = async 
     };
   }
 
-  return {
-    props: {
-      initialProduct: getProductFromQuery(query.product),
-      user,
-    },
-  };
+  try {
+    const products = await getScopedUserProductSummaries(user);
+    const initialProduct = getProductFromParam(query.product, products);
+    const items = await getProductHistoryItems(initialProduct, products);
+
+    return {
+      props: {
+        initialProduct,
+        items,
+        products,
+        user,
+      },
+    };
+  } catch (error) {
+    console.error('Load user dashboard data failed', error);
+
+    return {
+      props: {
+        initialProduct: '',
+        items: [],
+        products: [],
+        user,
+      },
+    };
+  }
 };
 
-export default function DashboardPage({ initialProduct, user: _user }: DashboardPageProps) {
+export default function DashboardPage({ initialProduct, items, products, user: _user }: DashboardPageProps) {
   const router = useRouter();
+  const initialRange = useMemo(() => getInitialSearchMonthRange(items), [items]);
   const [selectedProduct, setSelectedProduct] = useState<UserProduct>(initialProduct);
-  const [startMonth, setStartMonth] = useState(defaultStartMonth);
-  const [endMonth, setEndMonth] = useState(defaultEndMonth);
-  const [selectedYear, setSelectedYear] = useState(defaultStartMonth.slice(0, 4));
+  const [startMonth, setStartMonth] = useState(initialRange.startMonth);
+  const [endMonth, setEndMonth] = useState(initialRange.endMonth);
+  const [selectedYear, setSelectedYear] = useState(initialRange.endMonth.slice(0, 4));
   const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
-    endMonth: defaultEndMonth,
+    endMonth: initialRange.endMonth,
     product: initialProduct,
-    startMonth: defaultStartMonth,
+    startMonth: initialRange.startMonth,
   });
 
-  const dashboardData = useMemo(
-    () => getDashboardData(appliedFilters, selectedYear),
-    [appliedFilters, selectedYear]
-  );
+  useEffect(() => {
+    setSelectedProduct(initialProduct);
+    setStartMonth(initialRange.startMonth);
+    setEndMonth(initialRange.endMonth);
+    setSelectedYear(initialRange.endMonth.slice(0, 4));
+    setAppliedFilters({
+      endMonth: initialRange.endMonth,
+      product: initialProduct,
+      startMonth: initialRange.startMonth,
+    });
+  }, [initialProduct, initialRange]);
+
+  const dashboardData = useMemo(() => getDashboardData(items, appliedFilters, selectedYear), [appliedFilters, items, selectedYear]);
   const maxMonthlyValue = useMemo(
     () => Math.max(1, ...dashboardData.monthlyData.flatMap((datum) => [datum.counterfeit, datum.blocked])),
     [dashboardData.monthlyData]
   );
-  const highlightedMonth = useMemo(
-    () =>
-      dashboardData.monthlyData.reduce(
-        (highlight, datum) => (datum.counterfeit > highlight.counterfeit ? datum : highlight),
-        dashboardData.monthlyData[0]
-      ),
-    [dashboardData.monthlyData]
-  );
 
   const handleSearch = () => {
+    if (selectedProduct && selectedProduct !== appliedFilters.product) {
+      void router.replace({ pathname: '/dashboard', query: { product: selectedProduct } });
+      return;
+    }
+
     const normalizedRange = normalizeMonthRange(startMonth, endMonth);
 
     setStartMonth(normalizedRange.startMonth);
     setEndMonth(normalizedRange.endMonth);
-    setSelectedYear(normalizedRange.startMonth.slice(0, 4));
+    setSelectedYear(normalizedRange.endMonth.slice(0, 4));
     setAppliedFilters({
       ...normalizedRange,
       product: selectedProduct,
     });
-    void router.replace({ pathname: '/dashboard', query: { product: selectedProduct } }, undefined, { shallow: true });
+  };
+
+  const handleProductChange = (nextProduct: UserProduct) => {
+    setSelectedProduct(nextProduct);
+
+    if (nextProduct && nextProduct !== initialProduct) {
+      void router.replace({ pathname: '/dashboard', query: { product: nextProduct } });
+    }
   };
 
   return (
@@ -373,7 +509,7 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
         <title>대시보드 | LIFANG INC.</title>
       </Head>
 
-      <UserLayout>
+      <UserLayout accountEmail={_user.email} products={products}>
         <h1 className={styles.title}>대시보드</h1>
 
         <div className={styles.filters}>
@@ -383,13 +519,18 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
               <select
                 className={styles.select}
                 value={selectedProduct}
-                onChange={(event) => setSelectedProduct(event.target.value as UserProduct)}
+                onChange={(event) => handleProductChange(event.target.value)}
+                disabled={products.length === 0}
               >
-                {userProducts.map((product) => (
-                  <option key={product} value={product}>
-                    {product}
-                  </option>
-                ))}
+                {products.length > 0 ? (
+                  products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">업로드된 시트 없음</option>
+                )}
               </select>
               <ChevronDownIcon className={styles.controlIcon} />
             </span>
@@ -406,7 +547,7 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
           </div>
         </div>
 
-        <section className={styles.overview} aria-label="대시보드 요약">
+        <section className={styles.overview} aria-label={`${getProductLabel(appliedFilters.product, products)} 대시보드 요약`}>
           <div className={styles.statList}>
             {dashboardData.stats.map((stat) => (
               <article className={styles.statCard} key={stat.label}>
@@ -428,22 +569,19 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
               <div className={styles.ratioGroup}>
                 <p className={styles.subTitle}>플랫폼 별 비율</p>
                 <div className={styles.donutArea}>
-                  <div
-                    className={styles.donutChart}
-                    aria-label="플랫폼 별 비율 차트"
-                    style={{ background: dashboardData.donutGradient }}
-                  >
-                    <span className={styles.donutCenterText}>플랫폼별 비율</span>
-                  </div>
+                  <PlatformDonutChart platforms={dashboardData.platformData} />
                   <div className={styles.legend}>
-                    {dashboardData.platformData.map((platform, index) => (
-                      <div className={styles.legendItem} key={`${platform.name}-${index}`}>
-                        <span className={styles.legendDot} style={{ background: platform.color }} />
-                        <span className={styles.legendName}>{platform.name}</span>
-                        <span className={styles.legendPercent}>{dashboardData.platformPercentByName[platform.name]}</span>
-                        <span className={styles.legendCount}>{platform.count.toLocaleString('ko-KR')}건</span>
-                      </div>
-                    ))}
+                    {dashboardData.platformData.length > 0 ? (
+                      dashboardData.platformData.map((platform, index) => (
+                        <div className={styles.legendItem} key={`${platform.name}-${index}`}>
+                          <span className={styles.legendDot} style={{ background: platform.color }} />
+                          <span className={styles.legendName}>{platform.name}</span>
+                          <span className={styles.legendCount}>{platform.count.toLocaleString('ko-KR')}건</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className={styles.emptyState}>표시할 데이터가 없습니다.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -457,14 +595,18 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
                     <span>플랫폼</span>
                     <span>판매 갯수</span>
                   </div>
-                  {dashboardData.shopRanks.map((shop) => (
-                    <div className={styles.rankRow} key={shop.rank}>
-                      <span>{shop.rank}</span>
-                      <span>{shop.shop}</span>
-                      <span>{shop.platform}</span>
-                      <span>{shop.count}</span>
-                    </div>
-                  ))}
+                  {dashboardData.shopRanks.length > 0 ? (
+                    dashboardData.shopRanks.map((shop) => (
+                      <div className={styles.rankRow} key={`${shop.rank}-${shop.shop}`}>
+                        <span>{shop.rank}</span>
+                        <span>{shop.shop}</span>
+                        <span>{shop.platform}</span>
+                        <span>{shop.count}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className={styles.emptyState}>표시할 데이터가 없습니다.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -487,19 +629,7 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
               </div>
             </div>
 
-            <label className={styles.yearBox}>
-              <span>{selectedYear}</span>
-              <CalendarIcon className={styles.controlIcon} />
-              <select
-                className={styles.nativeYearSelect}
-                value={selectedYear}
-                onChange={(event) => setSelectedYear(event.target.value)}
-                aria-label="조회 연도"
-              >
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-            </label>
+            <YearControl ariaLabel="조회 연도" value={selectedYear} onChange={setSelectedYear} />
           </div>
 
           <div className={styles.chartArea}>
@@ -515,21 +645,28 @@ export default function DashboardPage({ initialProduct, user: _user }: Dashboard
                     <span
                       className={styles.counterfeitBar}
                       style={{ height: `${(datum.counterfeit / maxMonthlyValue) * 264}px` }}
+                      role="img"
+                      aria-label={`${Number(datum.month)}월 위조품 수 ${datum.counterfeit.toLocaleString('ko-KR')}건`}
+                      tabIndex={datum.counterfeit > 0 ? 0 : -1}
                     >
-                      {highlightedMonth.month === datum.month && datum.counterfeit > 0 ? (
-                        <span className={styles.counterfeitCallout}>
-                          위조품
-                          <br />
-                          {datum.counterfeit.toLocaleString('ko-KR')}건
+                      {datum.counterfeit > 0 ? (
+                        <span className={styles.chartTooltip} style={{ backgroundColor: '#ff932e' }}>
+                          <span>{Number(datum.month)}월 위조품 수</span>
+                          <strong>{datum.counterfeit.toLocaleString('ko-KR')}건</strong>
                         </span>
                       ) : null}
                     </span>
-                    <span className={styles.blockedBar} style={{ height: `${(datum.blocked / maxMonthlyValue) * 264}px` }}>
-                      {highlightedMonth.month === datum.month && datum.blocked > 0 ? (
-                        <span className={styles.blockedCallout}>
-                          차단
-                          <br />
-                          {datum.blocked.toLocaleString('ko-KR')}건
+                    <span
+                      className={styles.blockedBar}
+                      style={{ height: `${(datum.blocked / maxMonthlyValue) * 264}px` }}
+                      role="img"
+                      aria-label={`${Number(datum.month)}월 차단 건수 ${datum.blocked.toLocaleString('ko-KR')}건`}
+                      tabIndex={datum.blocked > 0 ? 0 : -1}
+                    >
+                      {datum.blocked > 0 ? (
+                        <span className={styles.chartTooltip} style={{ backgroundColor: '#ff2b3a' }}>
+                          <span>{Number(datum.month)}월 차단 건수</span>
+                          <strong>{datum.blocked.toLocaleString('ko-KR')}건</strong>
                         </span>
                       ) : null}
                     </span>

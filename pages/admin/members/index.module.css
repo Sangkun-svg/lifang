@@ -222,3 +222,17 @@ a.actionCell {
   color: #24282c;
   text-decoration: none;
 }
+
+.emptyState {
+  display: flex;
+  width: max(100%, 1128px);
+  min-height: 160px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border-bottom: 1px solid #e2e5e8;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}

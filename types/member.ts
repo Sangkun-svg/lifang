@@ -5,6 +5,7 @@ export type Member = {
   companyName: string;
   managerName: string;
   email: string;
+  sheetIds: string[];
   sheetLinks: string[];
   sheetNames: string[];
 };

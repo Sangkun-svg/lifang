@@ -162,6 +162,17 @@
   font: inherit;
 }
 
+.editControlGroup {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.customInput {
+  background: #f8fafc;
+}
+
 .editRow input:focus,
 .editRow select:focus {
   border-color: #1084fe;

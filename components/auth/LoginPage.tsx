@@ -25,6 +25,24 @@ type LoginPageProps = {
   passwordInputId?: string;
 };
 
+function getForbiddenRedirect(code: string) {
+  if (code === 'ADMIN_FORBIDDEN') {
+    return {
+      message: '사용자 계정입니다. 사용자 로그인 페이지로 이동합니다.',
+      redirectTo: '/login',
+    };
+  }
+
+  if (code === 'USER_FORBIDDEN') {
+    return {
+      message: '관리자 계정입니다. 관리자 로그인 페이지로 이동합니다.',
+      redirectTo: '/admin/login',
+    };
+  }
+
+  return null;
+}
+
 export function LoginPage({
   title,
   loginEndpoint,
@@ -65,6 +83,14 @@ export function LoginPage({
       const payload = (await response.json()) as ApiResponse<LoginResponseData>;
 
       if (!response.ok || !payload.ok) {
+        const forbiddenRedirect = payload.ok ? null : getForbiddenRedirect(payload.code);
+
+        if (forbiddenRedirect) {
+          window.alert(forbiddenRedirect.message);
+          await router.replace(forbiddenRedirect.redirectTo);
+          return;
+        }
+
         setErrorMessage(payload.ok ? '로그인 처리 중 문제가 발생했습니다.' : payload.message);
         return;
       }

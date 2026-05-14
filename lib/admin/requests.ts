@@ -1,6 +1,5 @@
 import { createServerDatabaseClient } from '@/lib/supabase/database';
-import { getProductHistoryItem, type ProductHistoryItem } from '@/lib/user/productHistory';
-import { isUserProduct } from '@/lib/user/products';
+import type { ProductHistoryItem } from '@/lib/user/productHistory';
 import type { AdminRequest, AdminRequestStatus } from '@/types/adminRequest';
 
 type AdminRequestRow = {
@@ -93,40 +92,6 @@ type CreateAdminRequestInput = {
   userId: string;
 };
 
-export const demoAdminRequest: AdminRequest = {
-  blockApproval: '승인 대기',
-  blockObjection: '-',
-  blockObjectionDecision: '-',
-  blockObjectionReason: '-',
-  blockReapproval: '-',
-  blockRejectionReason: '-',
-  blockReport: '신고 완료',
-  blockRereport: '-',
-  blockRereportRejectionReason: '-',
-  blockStatus: '신고완료',
-  companyName: '汕头市澄海区宝比迪玩具有限公司',
-  createdAt: '2026-05-13T04:00:00.000Z',
-  id: 'demo-request-1',
-  imageUrl: '/assets/product-sample.png',
-  itemId: '공룡-001',
-  message: '',
-  platform: '1688',
-  price: '4.12',
-  product: '공룡',
-  productName: '跨境儿童纸质恐龙3D立体拼图动物模型拼装亚马逊玩具益智DIY手工',
-  requestType: '차단 신청',
-  salesCount: 50,
-  salesUrl: 'https://page.1688.com/shtml/static/wrongpage.html',
-  searchDate: '2026-04-02',
-  sheetId: '',
-  sheetRecordId: '',
-  status: '신규요청',
-  userEmail: 'lifang@admin.kr',
-  userId: 'demo-user',
-};
-
-export const demoAdminRequests = [demoAdminRequest];
-
 function normalizeRequestStatus(value: string | null): AdminRequestStatus {
   if (value === 'in_progress') {
     return '처리중';
@@ -201,61 +166,46 @@ function buildAdminNotePayload(userId: string, detail: AdminNotePayload['detail'
   } satisfies AdminNotePayload);
 }
 
-function getHistoryFallback(row: AdminRequestRow, detail: AdminNotePayload['detail']) {
-  if (detail?.itemId && row.product && isUserProduct(row.product)) {
-    return getProductHistoryItem(row.product, detail.itemId);
-  }
-
-  return null;
-}
-
 function mapAdminRequest(row: AdminRequestRow, sheetRecord?: SheetRecordDetailRow | null): AdminRequest {
   const note = parseAdminNote(row.admin_note);
   const noteDetail = note.detail;
-  const historyFallback = getHistoryFallback(row, noteDetail);
 
   return {
-    blockApproval:
-      sheetRecord?.block_report_approval_text ?? noteDetail?.blockApproval ?? historyFallback?.blockApproval ?? '-',
-    blockObjection: sheetRecord?.opposition_text ?? noteDetail?.blockObjection ?? historyFallback?.blockObjection ?? '-',
+    blockApproval: sheetRecord?.block_report_approval_text ?? noteDetail?.blockApproval ?? '-',
+    blockObjection: sheetRecord?.opposition_text ?? noteDetail?.blockObjection ?? '-',
     blockObjectionDecision:
-      sheetRecord?.opposition_approval_text ?? noteDetail?.blockObjectionDecision ?? historyFallback?.blockObjectionDecision ?? '-',
+      sheetRecord?.opposition_approval_text ?? noteDetail?.blockObjectionDecision ?? '-',
     blockObjectionReason:
       sheetRecord?.opposition_approval_reason ??
       sheetRecord?.opposition_rejection_reason ??
       noteDetail?.blockObjectionReason ??
-      historyFallback?.blockObjectionReason ??
       '-',
-    blockReapproval:
-      sheetRecord?.block_rereport_approval_text ?? noteDetail?.blockReapproval ?? historyFallback?.blockReapproval ?? '-',
+    blockReapproval: sheetRecord?.block_rereport_approval_text ?? noteDetail?.blockReapproval ?? '-',
     blockRejectionReason:
       sheetRecord?.block_report_rejection_reason ??
       noteDetail?.blockRejectionReason ??
-      historyFallback?.blockRejectionReason ??
       '-',
-    blockReport: sheetRecord?.block_report_text ?? noteDetail?.blockReport ?? historyFallback?.blockReport ?? '-',
-    blockRereport:
-      sheetRecord?.block_rereport_text ?? noteDetail?.blockRereport ?? historyFallback?.blockRereport ?? '-',
+    blockReport: sheetRecord?.block_report_text ?? noteDetail?.blockReport ?? '-',
+    blockRereport: sheetRecord?.block_rereport_text ?? noteDetail?.blockRereport ?? '-',
     blockRereportRejectionReason:
       sheetRecord?.block_rereport_rejection_reason ??
       noteDetail?.blockRereportRejectionReason ??
-      historyFallback?.blockRereportRejectionReason ??
       '-',
-    blockStatus: sheetRecord?.block_status_text || noteDetail?.blockStatus || historyFallback?.status || '미신청',
-    companyName: sheetRecord?.seller_name ?? row.seller_name ?? historyFallback?.companyName ?? '',
+    blockStatus: sheetRecord?.block_status_text || noteDetail?.blockStatus || '미신청',
+    companyName: sheetRecord?.seller_name ?? row.seller_name ?? '',
     createdAt: row.created_at ?? '',
     id: row.id,
-    imageUrl: sheetRecord?.infringing_product_image_url ?? noteDetail?.imageUrl ?? historyFallback?.imageUrl ?? '',
-    itemId: row.sheet_record_id ?? noteDetail?.itemId ?? historyFallback?.id ?? '',
+    imageUrl: sheetRecord?.infringing_product_image_url ?? noteDetail?.imageUrl ?? '',
+    itemId: row.sheet_record_id ?? noteDetail?.itemId ?? '',
     message: row.user_message ?? row.admin_note ?? '',
-    platform: sheetRecord?.platform ?? row.platform ?? historyFallback?.platform ?? '',
-    price: sheetRecord?.price_raw ?? noteDetail?.price ?? historyFallback?.price ?? '',
+    platform: sheetRecord?.platform ?? row.platform ?? '',
+    price: sheetRecord?.price_raw ?? noteDetail?.price ?? '',
     product: row.product ?? '',
-    productName: sheetRecord?.product_name ?? row.product_name ?? historyFallback?.productName ?? '',
+    productName: sheetRecord?.product_name ?? row.product_name ?? '',
     requestType: row.request_type ?? '차단 신청',
-    salesCount: sheetRecord?.sales_count ?? noteDetail?.salesCount ?? historyFallback?.salesCount ?? 0,
-    salesUrl: sheetRecord?.infringing_product_url ?? row.sales_url ?? historyFallback?.salesUrl ?? '',
-    searchDate: sheetRecord?.search_date ?? noteDetail?.searchDate ?? historyFallback?.searchDate ?? '',
+    salesCount: sheetRecord?.sales_count ?? noteDetail?.salesCount ?? 0,
+    salesUrl: sheetRecord?.infringing_product_url ?? row.sales_url ?? '',
+    searchDate: sheetRecord?.search_date ?? noteDetail?.searchDate ?? '',
     sheetId: sheetRecord?.sheet_id ?? row.sheet_id ?? '',
     sheetRecordId: row.sheet_record_id ?? sheetRecord?.id ?? '',
     status: normalizeRequestStatus(row.status),
@@ -418,7 +368,8 @@ export async function createAdminRequest({ item, product, userEmail, userId }: C
       admin_note: adminNote,
       customer_id: customerId,
       customer_user_id: null,
-      sheet_record_id: null,
+      sheet_id: item.sheetId || null,
+      sheet_record_id: item.id,
       platform: item.platform,
       product,
       product_name: item.productName,
