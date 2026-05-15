@@ -137,7 +137,14 @@ export default function ProductHistoryDetailPage({ item, product, productName }:
         <main className={styles.detailPage}>
           <div className={styles.detailWrap}>
             <article className={styles.detailCard}>
-              {item.imageUrl ? <img className={styles.detailImage} src={item.imageUrl} alt={`${productName} 침해 제품`} /> : null}
+              {item.imageUrl ? (
+                <img
+                  className={styles.detailImage}
+                  src={item.imageUrl}
+                  alt={`${productName} 침해 제품`}
+                  referrerPolicy="no-referrer"
+                />
+              ) : null}
               <div className={styles.detailDivider} />
 
               <InfoSection rows={productInfoRows} title="침해 상품 정보" />

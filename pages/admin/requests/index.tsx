@@ -7,7 +7,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { getAdminRequests } from '@/lib/admin/requests';
 import { getSheetSummaries } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
-import type { AdminRequest } from '@/types/adminRequest';
+import type { AdminRequest, AdminRequestStatus } from '@/types/adminRequest';
 import type { SheetSummary } from '@/types/sheet';
 
 import styles from './index.module.css';
@@ -19,6 +19,7 @@ type AdminRequestsPageProps = {
 };
 
 type RequestSortField = 'createdAtDesc' | 'createdAtAsc' | 'platform' | 'user' | 'name' | 'status';
+type RequestStatusFilter = AdminRequestStatus | 'all';
 
 const requestSortOptions: Array<{ label: string; value: RequestSortField }> = [
   { label: '날짜순 최신', value: 'createdAtDesc' },
@@ -27,6 +28,14 @@ const requestSortOptions: Array<{ label: string; value: RequestSortField }> = [
   { label: '유저순', value: 'user' },
   { label: '이름순', value: 'name' },
   { label: '상태순', value: 'status' },
+];
+
+const requestStatusFilterOptions: Array<{ label: string; value: RequestStatusFilter }> = [
+  { label: '전체', value: 'all' },
+  { label: '신규요청', value: '신규요청' },
+  { label: '처리중', value: '처리중' },
+  { label: '처리완료', value: '처리완료' },
+  { label: '반려', value: '반려' },
 ];
 
 function formatDateTime(value: string) {
@@ -84,8 +93,11 @@ export const getServerSideProps: GetServerSideProps<AdminRequestsPageProps> = as
 
 export default function AdminRequestsPage({ requests, sheetSummaries }: AdminRequestsPageProps) {
   const [sortField, setSortField] = useState<RequestSortField>('createdAtDesc');
+  const [statusFilter, setStatusFilter] = useState<RequestStatusFilter>('all');
   const visibleRequests = useMemo(() => {
-    return [...requests].sort((first, second) => {
+    const filteredRequests = requests.filter((request) => statusFilter === 'all' || request.status === statusFilter);
+
+    return filteredRequests.sort((first, second) => {
       if (sortField === 'createdAtDesc') {
         return new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime();
       }
@@ -108,7 +120,7 @@ export default function AdminRequestsPage({ requests, sheetSummaries }: AdminReq
 
       return first.status.localeCompare(second.status, 'ko-KR');
     });
-  }, [requests, sortField]);
+  }, [requests, sortField, statusFilter]);
 
   return (
     <>
@@ -122,9 +134,19 @@ export default function AdminRequestsPage({ requests, sheetSummaries }: AdminReq
             <h1 className={styles.title}>최근 요청({requests.length.toLocaleString('ko-KR')}건)</h1>
             <div className={styles.headerControls}>
               <label className={styles.sortGroup}>
-                <span>필터</span>
+                <span>정렬</span>
                 <select value={sortField} onChange={(event) => setSortField(event.target.value as RequestSortField)}>
                   {requestSortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.sortGroup}>
+                <span>진행상황</span>
+                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as RequestStatusFilter)}>
+                  {requestStatusFilterOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>

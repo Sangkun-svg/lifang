@@ -424,7 +424,12 @@ export default function ProductHistoryListPage({ initialPage, items, product, pr
                     <span className={styles.dateCell}>{item.displayDate}</span>
                     <span className={styles.imageCell}>
                       {item.imageUrl ? (
-                        <img className={styles.productThumbnail} src={item.imageUrl} alt={`${productName} 침해 제품`} />
+                        <img
+                          className={styles.productThumbnail}
+                          src={item.imageUrl}
+                          alt={`${productName} 침해 제품`}
+                          referrerPolicy="no-referrer"
+                        />
                       ) : (
                         '-'
                       )}

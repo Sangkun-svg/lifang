@@ -8,7 +8,7 @@ import { CalendarIcon, ChevronDownIcon } from '@/components/icons/AdminIcons';
 import { getSheetRecords, getSheetSummaries, getSheetSummaryById } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
 import { getInitialSearchDateRange } from '@/lib/date/defaultRange';
-import type { SheetRecord, SheetSummary } from '@/types/sheet';
+import type { SheetRecord, SheetRecordStatus, SheetSummary } from '@/types/sheet';
 
 import styles from '@/pages/products/ProductHistory.module.css';
 
@@ -25,6 +25,7 @@ type AppliedDateFilter = {
 };
 
 type SheetFilterField = 'price' | 'salesCount' | 'platform';
+type SheetStatusFilter = SheetRecordStatus | 'all';
 
 type PickerInput = HTMLInputElement & {
   showPicker?: () => void;
@@ -34,6 +35,13 @@ const sheetFilterOptions: Array<{ label: string; value: SheetFilterField }> = [
   { label: '판매가', value: 'price' },
   { label: '판매수량', value: 'salesCount' },
   { label: '플랫폼', value: 'platform' },
+];
+
+const sheetStatusFilterOptions: Array<{ label: string; value: SheetStatusFilter }> = [
+  { label: '전체', value: 'all' },
+  { label: '미신청', value: '미신청' },
+  { label: '신고완료', value: '신고완료' },
+  { label: '차단완료', value: '차단완료' },
 ];
 
 function formatDateLabel(value: string) {
@@ -179,6 +187,7 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
   const [endDate, setEndDate] = useState(initialDateRange.endDate);
   const [appliedDateFilter, setAppliedDateFilter] = useState<AppliedDateFilter>(initialDateRange);
   const [filterField, setFilterField] = useState<SheetFilterField>('price');
+  const [statusFilter, setStatusFilter] = useState<SheetStatusFilter>('all');
 
   useEffect(() => {
     setStartDate(initialDateRange.startDate);
@@ -187,12 +196,16 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
   }, [initialDateRange, sheet.id]);
 
   const visibleRecords = useMemo(() => {
-    const filteredRecords = records.filter(
-      (record) => !record.searchDate || (record.searchDate >= appliedDateFilter.startDate && record.searchDate <= appliedDateFilter.endDate)
-    );
+    const filteredRecords = records.filter((record) => {
+      const matchesDate =
+        !record.searchDate || (record.searchDate >= appliedDateFilter.startDate && record.searchDate <= appliedDateFilter.endDate);
+      const matchesStatus = statusFilter === 'all' || record.status === statusFilter;
+
+      return matchesDate && matchesStatus;
+    });
 
     return sortRecords(filteredRecords, filterField);
-  }, [appliedDateFilter.endDate, appliedDateFilter.startDate, filterField, records]);
+  }, [appliedDateFilter.endDate, appliedDateFilter.startDate, filterField, records, statusFilter]);
 
   const handleRefresh = () => {
     const normalizedDateRange = normalizeDateRange(startDate, endDate);
@@ -223,6 +236,24 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
                     onChange={(event) => setFilterField(event.target.value as SheetFilterField)}
                   >
                     {sheetFilterOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDownIcon className={styles.selectIcon} />
+                </span>
+              </label>
+
+              <label className={styles.selectGroup}>
+                <span className={styles.filterLabel}>진행상황</span>
+                <span className={styles.selectBox}>
+                  <select
+                    className={styles.select}
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value as SheetStatusFilter)}
+                  >
+                    {sheetStatusFilterOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -269,7 +300,12 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
                   <span className={styles.dateCell}>{record.displayDate}</span>
                   <span className={styles.imageCell}>
                     {record.imageUrl ? (
-                      <img className={styles.productThumbnail} src={record.imageUrl} alt={`${record.productName} 제품`} />
+                      <img
+                        className={styles.productThumbnail}
+                        src={record.imageUrl}
+                        alt={`${record.productName} 제품`}
+                        referrerPolicy="no-referrer"
+                      />
                     ) : (
                       '-'
                     )}

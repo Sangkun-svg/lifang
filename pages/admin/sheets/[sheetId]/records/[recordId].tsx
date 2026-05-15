@@ -323,7 +323,12 @@ export default function AdminSheetRecordDetailPage({ record, sheet, sheetSummari
             </header>
 
             {currentRecord.imageUrl ? (
-              <img className={styles.productImage} src={currentRecord.imageUrl} alt={`${currentRecord.productName} 제품`} />
+              <img
+                className={styles.productImage}
+                src={currentRecord.imageUrl}
+                alt={`${currentRecord.productName} 제품`}
+                referrerPolicy="no-referrer"
+              />
             ) : null}
 
             <InfoSection rows={sheetRows} title="시트 정보" />

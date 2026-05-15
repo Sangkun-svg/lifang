@@ -317,7 +317,12 @@ export default function AdminRequestDetailPage({ request, sheetSummaries }: Admi
             </header>
 
             {currentRequest.imageUrl ? (
-              <img className={styles.productImage} src={currentRequest.imageUrl} alt={`${currentRequest.productName} 제품`} />
+              <img
+                className={styles.productImage}
+                src={currentRequest.imageUrl}
+                alt={`${currentRequest.productName} 제품`}
+                referrerPolicy="no-referrer"
+              />
             ) : null}
 
             <InfoSection rows={requestRows} title="요청 정보" />
