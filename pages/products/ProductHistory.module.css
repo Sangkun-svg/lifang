@@ -153,6 +153,110 @@
   cursor: pointer;
 }
 
+.addRowButton,
+.addRecordSubmitButton,
+.closeAddRecordButton {
+  display: flex;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 16px;
+  background: #ff2b3a;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.addRowButton {
+  width: 112px;
+  flex: 0 0 112px;
+}
+
+.addRowIcon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.addRecordPanel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid #f0f2f4;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.addRecordField {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addRecordField span {
+  color: #24282c;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: 0;
+}
+
+.addRecordField input,
+.addRecordField select {
+  width: 100%;
+  height: 44px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid #f0f2f4;
+  border-radius: 12px;
+  outline: 0;
+  background: #ffffff;
+  color: #24282c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: 0;
+}
+
+.addRecordField input:focus,
+.addRecordField select:focus {
+  border-color: #1084fe;
+}
+
+.addRecordActions {
+  display: flex;
+  grid-column: 1 / -1;
+  min-height: 52px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.addRecordSubmitButton {
+  width: 112px;
+}
+
+.closeAddRecordButton {
+  width: 88px;
+  border: 1px solid #e2e5e8;
+  background: #ffffff;
+  color: #24282c;
+}
+
+.addRecordSubmitButton:disabled {
+  background: #9ba3aa;
+  cursor: default;
+}
+
 .historyTable {
   width: 100%;
   max-width: 100%;
@@ -163,6 +267,18 @@
 .inlineError {
   margin: 0 0 12px;
   color: #ff2b3a;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+}
+
+.addRecordActions .inlineError,
+.addRecordActions .inlineSuccess {
+  margin: 0;
+}
+
+.inlineSuccess {
+  color: #1084fe;
   font-size: 14px;
   font-weight: 500;
   line-height: 21px;
@@ -236,6 +352,7 @@
   height: 100%;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   padding: 0 16px;
 }
 
@@ -269,9 +386,29 @@
   -webkit-line-clamp: 3;
 }
 
+.tableRow .indexCell {
+  flex-direction: column;
+  gap: 4px;
+}
+
 .statusCell {
   gap: 4px;
   font-weight: 700;
+}
+
+.newRecordChip {
+  display: inline-flex;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #fff1f2;
+  color: #ff2b3a;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 18px;
+  letter-spacing: 0;
 }
 
 .statusCell i,

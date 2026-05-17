@@ -35,6 +35,7 @@ export type SheetRecord = {
   platform: string;
   price: string;
   productName: string;
+  rowIndex: number;
   salesCount: number;
   salesUrl: string;
   searchDate: string;

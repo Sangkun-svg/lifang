@@ -102,6 +102,7 @@
 | ADMIN-SHEET-011 | P1 | `/admin/sheets` | 매칭되지 않은 시트의 삭제하기를 클릭한다 | 확인 후 시트와 시트 레코드가 hard delete되고 목록에서 사라진다 |
 | ADMIN-SHEET-012 | P1 | `/admin/sheets` | 고객에게 매칭된 시트의 삭제하기를 클릭한다 | 해당 고객명 또는 이메일이 포함된 팝업이 표시되고 삭제되지 않는다 |
 | ADMIN-SHEET-013 | P1 | `/api/admin/sheets/[sheetId]` | 고객에게 매칭된 시트를 DELETE로 직접 요청한다 | `409 SHEET_ASSIGNED_TO_CUSTOMER` 응답으로 삭제가 차단된다 |
+| ADMIN-SHEET-014 | P1 | `/admin/sheets/[sheetId]` | 행 추가를 열고 필수 제품명과 선택 정보를 입력한 뒤 저장한다 | 새 시트 행이 DB에 저장되고 현재 시트 목록에 즉시 추가된다 |
 
 ## 유저 대시보드
 

@@ -1,10 +1,13 @@
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { CalendarIcon, ChevronDownIcon } from '@/components/icons/AdminIcons';
+import { DoubleBounceLoader } from '@/components/ui/DoubleBounceLoader';
+import type { ApiResponse } from '@/lib/api/responses';
 import { getSheetRecords, getSheetSummaries, getSheetSummaryById } from '@/lib/admin/sheets';
 import { getAdminSessionUser, type AdminSessionUser } from '@/lib/auth/admin';
 import { getInitialSearchDateRange } from '@/lib/date/defaultRange';
@@ -24,14 +27,27 @@ type AppliedDateFilter = {
   startDate: string;
 };
 
-type SheetFilterField = 'price' | 'salesCount' | 'platform';
+type SheetFilterField = 'rowIndex' | 'price' | 'salesCount' | 'platform';
 type SheetStatusFilter = SheetRecordStatus | 'all';
+
+type NewSheetRecordForm = {
+  companyName: string;
+  imageUrl: string;
+  platform: string;
+  price: string;
+  productName: string;
+  salesCount: string;
+  salesUrl: string;
+  searchDate: string;
+  status: SheetRecordStatus;
+};
 
 type PickerInput = HTMLInputElement & {
   showPicker?: () => void;
 };
 
 const sheetFilterOptions: Array<{ label: string; value: SheetFilterField }> = [
+  { label: '순번', value: 'rowIndex' },
   { label: '판매가', value: 'price' },
   { label: '판매수량', value: 'salesCount' },
   { label: '플랫폼', value: 'platform' },
@@ -43,6 +59,22 @@ const sheetStatusFilterOptions: Array<{ label: string; value: SheetStatusFilter 
   { label: '신고완료', value: '신고완료' },
   { label: '차단완료', value: '차단완료' },
 ];
+
+const emptyNewRecordForm: NewSheetRecordForm = {
+  companyName: '',
+  imageUrl: '',
+  platform: '',
+  price: '',
+  productName: '',
+  salesCount: '0',
+  salesUrl: '',
+  searchDate: '',
+  status: '미신청',
+};
+
+type CreateSheetRecordResponse = {
+  record: SheetRecord;
+};
 
 function formatDateLabel(value: string) {
   const [year, month, day] = value.split('-');
@@ -110,8 +142,12 @@ function normalizeDateRange(startDate: string, endDate: string): AppliedDateFilt
 
 function sortRecords(records: SheetRecord[], field: SheetFilterField) {
   return [...records].sort((first, second) => {
+    if (field === 'rowIndex') {
+      return first.rowIndex - second.rowIndex;
+    }
+
     if (field === 'price') {
-      return Number(second.price) - Number(first.price);
+      return parseIntegerInput(second.price) - parseIntegerInput(first.price);
     }
 
     if (field === 'salesCount') {
@@ -120,6 +156,39 @@ function sortRecords(records: SheetRecord[], field: SheetFilterField) {
 
     return first.platform.localeCompare(second.platform, 'ko-KR');
   });
+}
+
+function formatIntegerInput(value: string) {
+  const digits = value.replace(/\D/g, '');
+
+  if (!digits) {
+    return '';
+  }
+
+  return Number(digits).toLocaleString('ko-KR');
+}
+
+function parseIntegerInput(value: string) {
+  const digits = value.replace(/\D/g, '');
+
+  return digits ? Number(digits) : 0;
+}
+
+function getInitialSheetSearchDateRange(records: SheetRecord[]): AppliedDateFilter {
+  const fallbackRange = getInitialSearchDateRange(records);
+  const dates = records
+    .map((record) => record.searchDate)
+    .filter((searchDate): searchDate is string => Boolean(searchDate))
+    .sort();
+
+  if (dates.length === 0) {
+    return fallbackRange;
+  }
+
+  return {
+    endDate: dates[dates.length - 1] ?? fallbackRange.endDate,
+    startDate: dates[0] ?? fallbackRange.startDate,
+  };
 }
 
 export const getServerSideProps: GetServerSideProps<AdminSheetDetailPageProps> = async ({ query, req, res }) => {
@@ -182,12 +251,25 @@ export const getServerSideProps: GetServerSideProps<AdminSheetDetailPageProps> =
 };
 
 export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }: AdminSheetDetailPageProps) {
-  const initialDateRange = useMemo(() => getInitialSearchDateRange(records), [records]);
+  const addSearchDateRef = useRef<HTMLInputElement>(null);
+  const [currentRecords, setCurrentRecords] = useState(records);
+  const initialDateRange = useMemo(() => getInitialSheetSearchDateRange(currentRecords), [currentRecords]);
   const [startDate, setStartDate] = useState(initialDateRange.startDate);
   const [endDate, setEndDate] = useState(initialDateRange.endDate);
   const [appliedDateFilter, setAppliedDateFilter] = useState<AppliedDateFilter>(initialDateRange);
-  const [filterField, setFilterField] = useState<SheetFilterField>('price');
+  const [filterField, setFilterField] = useState<SheetFilterField>('rowIndex');
   const [statusFilter, setStatusFilter] = useState<SheetStatusFilter>('all');
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const [newRecordForm, setNewRecordForm] = useState<NewSheetRecordForm>(emptyNewRecordForm);
+  const [addErrorMessage, setAddErrorMessage] = useState('');
+  const [addSuccessMessage, setAddSuccessMessage] = useState('');
+  const [isAddingRecord, setIsAddingRecord] = useState(false);
+  const [temporaryNewRecordIds, setTemporaryNewRecordIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setCurrentRecords(records);
+    setTemporaryNewRecordIds([]);
+  }, [records, sheet.id]);
 
   useEffect(() => {
     setStartDate(initialDateRange.startDate);
@@ -196,7 +278,7 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
   }, [initialDateRange, sheet.id]);
 
   const visibleRecords = useMemo(() => {
-    const filteredRecords = records.filter((record) => {
+    const filteredRecords = currentRecords.filter((record) => {
       const matchesDate =
         !record.searchDate || (record.searchDate >= appliedDateFilter.startDate && record.searchDate <= appliedDateFilter.endDate);
       const matchesStatus = statusFilter === 'all' || record.status === statusFilter;
@@ -204,8 +286,19 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
       return matchesDate && matchesStatus;
     });
 
-    return sortRecords(filteredRecords, filterField);
-  }, [appliedDateFilter.endDate, appliedDateFilter.startDate, filterField, records, statusFilter]);
+    if (temporaryNewRecordIds.length === 0) {
+      return sortRecords(filteredRecords, filterField);
+    }
+
+    const temporaryNewRecordIdSet = new Set(temporaryNewRecordIds);
+    const temporaryNewRecordOrder = new Map(temporaryNewRecordIds.map((recordId, index) => [recordId, index]));
+    const newRecords = filteredRecords
+      .filter((record) => temporaryNewRecordIdSet.has(record.id))
+      .sort((first, second) => (temporaryNewRecordOrder.get(first.id) ?? 0) - (temporaryNewRecordOrder.get(second.id) ?? 0));
+    const regularRecords = filteredRecords.filter((record) => !temporaryNewRecordIdSet.has(record.id));
+
+    return [...newRecords, ...sortRecords(regularRecords, filterField)];
+  }, [appliedDateFilter.endDate, appliedDateFilter.startDate, currentRecords, filterField, statusFilter, temporaryNewRecordIds]);
 
   const handleRefresh = () => {
     const normalizedDateRange = normalizeDateRange(startDate, endDate);
@@ -213,6 +306,77 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
     setStartDate(normalizedDateRange.startDate);
     setEndDate(normalizedDateRange.endDate);
     setAppliedDateFilter(normalizedDateRange);
+    setFilterField('rowIndex');
+    setTemporaryNewRecordIds([]);
+  };
+
+  const openAddSearchDatePicker = () => {
+    const input = addSearchDateRef.current as PickerInput | null;
+
+    if (!input) {
+      return;
+    }
+
+    try {
+      input.showPicker?.();
+    } catch {
+      input.click();
+    }
+  };
+
+  const updateNewRecordField = <Field extends keyof NewSheetRecordForm>(field: Field, value: NewSheetRecordForm[Field]) => {
+    setNewRecordForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+    setAddErrorMessage('');
+    setAddSuccessMessage('');
+  };
+
+  const handleAddRecord = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (isAddingRecord) {
+      return;
+    }
+
+    if (!newRecordForm.productName.trim()) {
+      setAddErrorMessage('침해 제품명을 입력해주세요.');
+      return;
+    }
+
+    setIsAddingRecord(true);
+    setAddErrorMessage('');
+    setAddSuccessMessage('');
+
+    try {
+      const response = await fetch(`/api/admin/sheets/${encodeURIComponent(sheet.id)}/records`, {
+        body: JSON.stringify({
+          ...newRecordForm,
+          salesCount: parseIntegerInput(newRecordForm.salesCount),
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      });
+      const payload = (await response.json()) as ApiResponse<CreateSheetRecordResponse>;
+
+      if (!response.ok || !payload.ok) {
+        setAddErrorMessage(payload.ok ? '행 추가 중 문제가 발생했습니다.' : payload.message);
+        return;
+      }
+
+      setCurrentRecords((current) => [...current, payload.data.record]);
+      setTemporaryNewRecordIds((current) => [payload.data.record.id, ...current]);
+      setFilterField('rowIndex');
+      setNewRecordForm(emptyNewRecordForm);
+      setAddSuccessMessage('행이 추가되었습니다.');
+    } catch {
+      setAddErrorMessage('행 추가 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsAddingRecord(false);
+    }
   };
 
   return (
@@ -233,7 +397,10 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
                   <select
                     className={styles.select}
                     value={filterField}
-                    onChange={(event) => setFilterField(event.target.value as SheetFilterField)}
+                    onChange={(event) => {
+                      setFilterField(event.target.value as SheetFilterField);
+                      setTemporaryNewRecordIds([]);
+                    }}
                   >
                     {sheetFilterOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -270,8 +437,146 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
               <button className={styles.refreshButton} type="button" onClick={handleRefresh}>
                 새로고침
               </button>
+              <button
+                className={styles.addRowButton}
+                type="button"
+                onClick={() => {
+                  setIsAddFormOpen((current) => !current);
+                  setAddErrorMessage('');
+                  setAddSuccessMessage('');
+                }}
+                aria-expanded={isAddFormOpen}
+              >
+                <Plus className={styles.addRowIcon} aria-hidden="true" />
+                <span>행 추가</span>
+              </button>
             </div>
           </header>
+
+          {isAddFormOpen ? (
+            <form className={styles.addRecordPanel} onSubmit={handleAddRecord}>
+              <label className={styles.addRecordField}>
+                <span>검색 날짜</span>
+                <input
+                  ref={addSearchDateRef}
+                  type="date"
+                  value={newRecordForm.searchDate}
+                  onClick={openAddSearchDatePicker}
+                  onFocus={openAddSearchDatePicker}
+                  onChange={(event) => updateNewRecordField('searchDate', event.target.value)}
+                />
+              </label>
+              <label className={styles.addRecordField}>
+                <span>진행 상황</span>
+                <select
+                  value={newRecordForm.status}
+                  onChange={(event) => updateNewRecordField('status', event.target.value as SheetRecordStatus)}
+                >
+                  {sheetStatusFilterOptions
+                    .filter((option): option is { label: string; value: SheetRecordStatus } => option.value !== 'all')
+                    .map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label className={styles.addRecordField}>
+                <span>침해 플랫폼</span>
+                <input
+                  value={newRecordForm.platform}
+                  onChange={(event) => updateNewRecordField('platform', event.target.value)}
+                  placeholder="플랫폼"
+                  type="text"
+                />
+              </label>
+              <label className={styles.addRecordField}>
+                <span>침해 제품명</span>
+                <input
+                  required
+                  value={newRecordForm.productName}
+                  onChange={(event) => updateNewRecordField('productName', event.target.value)}
+                  placeholder="제품명"
+                  type="text"
+                />
+              </label>
+              <label className={styles.addRecordField}>
+                <span>침해 업체명칭</span>
+                <input
+                  value={newRecordForm.companyName}
+                  onChange={(event) => updateNewRecordField('companyName', event.target.value)}
+                  placeholder="업체명칭"
+                  type="text"
+                />
+              </label>
+              <label className={styles.addRecordField}>
+                <span>판매가￥</span>
+                <input
+                  value={newRecordForm.price}
+                  onChange={(event) => updateNewRecordField('price', formatIntegerInput(event.target.value))}
+                  inputMode="numeric"
+                  placeholder="판매가"
+                  type="text"
+                />
+              </label>
+              <label className={styles.addRecordField}>
+                <span>판매수량</span>
+                <input
+                  value={newRecordForm.salesCount}
+                  onChange={(event) => updateNewRecordField('salesCount', formatIntegerInput(event.target.value))}
+                  inputMode="numeric"
+                  type="text"
+                />
+              </label>
+              <label className={styles.addRecordField}>
+                <span>침해 제품사진 URL</span>
+                <input
+                  value={newRecordForm.imageUrl}
+                  onChange={(event) => updateNewRecordField('imageUrl', event.target.value)}
+                  placeholder="https://"
+                  type="text"
+                />
+              </label>
+              <label className={styles.addRecordField}>
+                <span>판매링크</span>
+                <input
+                  value={newRecordForm.salesUrl}
+                  onChange={(event) => updateNewRecordField('salesUrl', event.target.value)}
+                  placeholder="https://"
+                  type="text"
+                />
+              </label>
+              <div className={styles.addRecordActions}>
+                {addErrorMessage ? (
+                  <p className={styles.inlineError} role="alert">
+                    {addErrorMessage}
+                  </p>
+                ) : null}
+                {addSuccessMessage ? <p className={styles.inlineSuccess}>{addSuccessMessage}</p> : null}
+                <button
+                  className={styles.closeAddRecordButton}
+                  type="button"
+                  onClick={() => {
+                    setIsAddFormOpen(false);
+                    setAddErrorMessage('');
+                    setAddSuccessMessage('');
+                  }}
+                >
+                  닫기
+                </button>
+                <button className={styles.addRecordSubmitButton} type="submit" disabled={isAddingRecord}>
+                  {isAddingRecord ? (
+                    <>
+                      <DoubleBounceLoader size={18} variant="light" label="시트 행 추가 중" />
+                      <span>추가 중</span>
+                    </>
+                  ) : (
+                    '행 저장'
+                  )}
+                </button>
+              </div>
+            </form>
+          ) : null}
 
           <section className={styles.historyTable} aria-label={`${sheet.name} 내역목록`}>
             <div className={styles.tableHeader}>
@@ -290,9 +595,12 @@ export default function AdminSheetDetailPage({ records, sheet, sheetSummaries }:
             </div>
 
             <div className={styles.tableRows}>
-              {visibleRecords.map((record, index) => (
+              {visibleRecords.map((record) => (
                 <div className={styles.tableRow} key={record.id}>
-                  <span className={styles.indexCell}>{String(index + 1).padStart(2, '0')}</span>
+                  <span className={styles.indexCell}>
+                    {temporaryNewRecordIds.includes(record.id) ? <span className={styles.newRecordChip}>NEW</span> : null}
+                    <span>{String(record.rowIndex || '-').padStart(2, '0')}</span>
+                  </span>
                   <span className={styles.statusCell} data-status={record.status}>
                     <i />
                     {record.status}

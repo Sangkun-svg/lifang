@@ -37,6 +37,7 @@ type SheetRecordRow = {
   platform: string | null;
   price_raw: string | null;
   product_name: string | null;
+  row_index: number | null;
   sales_count: number | null;
   search_date: string | null;
   seller_name: string | null;
@@ -53,6 +54,7 @@ const sheetRecordSelectColumns = [
   'seller_name',
   'price_raw',
   'sales_count',
+  'row_index',
   'block_status_text',
   'block_report_text',
   'block_report_approval_text',
@@ -81,6 +83,8 @@ export type CreateSheetRecordInput = {
   searchDate: string;
   status: SheetRecordStatus;
 };
+
+export type CreateSingleSheetRecordInput = CreateSheetRecordInput;
 
 type SheetUploadTransactionRecord = CreateSheetRecordInput & {
   rowIndex: number;
@@ -220,6 +224,7 @@ function mapSheetRecord(row: SheetRecordRow): SheetRecord {
     platform: row.platform ?? '',
     price: row.price_raw ?? '',
     productName: row.product_name ?? '',
+    rowIndex: row.row_index ?? 0,
     salesCount: row.sales_count ?? 0,
     salesUrl: row.infringing_product_url ?? '',
     searchDate,
@@ -356,6 +361,74 @@ export async function getSheetRecordById(sheetId: string, recordId: string) {
   }
 
   return data ? mapSheetRecord(data as unknown as SheetRecordRow) : null;
+}
+
+export async function createSheetRecord(sheetId: string, input: CreateSingleSheetRecordInput) {
+  const supabase = createServerDatabaseClient();
+  const { data: sheetData, error: sheetLookupError } = await supabase.from('sheets').select('id,customer_id').eq('id', sheetId).maybeSingle();
+
+  if (sheetLookupError) {
+    throw new Error(sheetLookupError.message);
+  }
+
+  if (!sheetData) {
+    throw new Error('SHEET_NOT_FOUND');
+  }
+
+  const sheetRow = sheetData as { customer_id: string | null; id: string };
+  const { data: lastRecordData, error: lastRecordError } = await supabase
+    .from('sheet_records')
+    .select('row_index')
+    .eq('sheet_id', sheetId)
+    .order('row_index', { ascending: false })
+    .limit(1);
+
+  if (lastRecordError) {
+    throw new Error(lastRecordError.message);
+  }
+
+  const lastRecordRows = (lastRecordData ?? []) as Array<{ row_index: number | null }>;
+  const nextRowIndex = (lastRecordRows[0]?.row_index ?? 0) + 1;
+  const { data, error } = await supabase
+    .from('sheet_records')
+    .insert({
+      block_status_text: input.status,
+      customer_id: sheetRow.customer_id,
+      infringing_product_image_url: input.imageUrl,
+      infringing_product_url: input.salesUrl,
+      platform: input.platform || input.category,
+      price_raw: input.price,
+      product_name: input.productName,
+      raw_record: input,
+      row_index: nextRowIndex,
+      sales_count: input.salesCount,
+      search_date: input.searchDate || null,
+      seller_name: input.companyName,
+      sheet_id: sheetId,
+    })
+    .select(sheetRecordSelectColumns)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const { count, error: countError } = await supabase
+    .from('sheet_records')
+    .select('id', { count: 'exact', head: true })
+    .eq('sheet_id', sheetId);
+
+  if (countError) {
+    throw new Error(countError.message);
+  }
+
+  const { error: sheetUpdateError } = await supabase.from('sheets').update({ record_count: count ?? nextRowIndex }).eq('id', sheetId);
+
+  if (sheetUpdateError) {
+    throw new Error(sheetUpdateError.message);
+  }
+
+  return mapSheetRecord(data as unknown as SheetRecordRow);
 }
 
 export async function updateSheetRecord(sheetId: string, recordId: string, input: UpdateSheetRecordInput) {

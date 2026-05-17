@@ -19,6 +19,7 @@ const protectedAdminApiProbes: ProtectedApiProbe[] = [
   { method: 'DELETE', path: `/api/admin/members/${placeholderUuid}` },
   { data: {}, method: 'PATCH', path: `/api/admin/requests/${placeholderUuid}` },
   { data: {}, method: 'PATCH', path: `/api/admin/sheet-records/${placeholderUuid}` },
+  { data: {}, method: 'POST', path: `/api/admin/sheets/${placeholderUuid}/records` },
   { method: 'DELETE', path: `/api/admin/sheets/${placeholderUuid}` },
   { method: 'POST', path: '/api/admin/sheets/cleanup' },
   { method: 'POST', path: '/api/admin/sheets/upload' },
